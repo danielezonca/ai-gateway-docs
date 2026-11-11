@@ -254,6 +254,26 @@ const N = {
   p_resp_guard: { x: 770, y: 653, w: 320, h: 36, label: 'nemo-response-guard', color: '#3fb950', type: 'plugin', inner: true, fs: 13, optin: true },
   p_bmth:    { x: 770, y: 691, w: 320, h: 36, label: 'base-model-to-header', color: '#58a6ff', type: 'plugin', inner: true, fs: 13, optin: true },
 
+  iobj: { x: 745, y: 775, w: 190, h: 50, label: 'InferenceObjective', sublabel: 'inference priority (3.6)', color: '#79c0ff', fs: 12, v36: true },
+
+  // ===== 3.6: praxis-extproc dataplane (S1 slot, TP amber) =====
+  praxis: { x: 740, y: 260, w: 380, h: 500, type: 'container', label: 'praxis-extproc', sublabel: '(ext_proc · Tech Preview)', color: '#f0883e', tp: true },
+  pr_mth:     { x: 770, y: 330, w: 320, h: 36, label: 'model_to_header', color: '#f0883e', type: 'plugin', inner: true, fs: 13 },
+  pr_llmisvc: { x: 770, y: 368, w: 320, h: 36, label: 'llmisvc_model_provider_resolver', color: '#f0883e', type: 'plugin', inner: true, fs: 11 },
+  pr_ir:      { x: 770, y: 450, w: 320, h: 36, label: 'intelligent_route', sublabel: '(routing overlay, hot reload)', color: '#f0883e', type: 'plugin', inner: true, fs: 13 },
+  pr_ci:      { x: 770, y: 488, w: 320, h: 36, label: 'credential_inject', color: '#f0883e', type: 'plugin', inner: true, fs: 13 },
+  pr_resp:    { x: 770, y: 570, w: 320, h: 64, label: 'Responses API', sublabel: 'in image, not wired (TP)', color: '#8b949e', type: 'plugin', inner: true, fs: 13, ghost: true },
+
+  // ===== 3.6: control plane =====
+  agc: { x: 510, y: 500, w: 210, h: 75, label: 'ai-gateway-controller', sublabel: 'renders praxis dataplane', color: '#f0883e', fs: 12, v36: true },
+
+  // ===== 3.6 migration flow: control-plane strip (S5' slot) =====
+  mc:      { x: 230, y: 880, w: 240, h: 60, label: 'maas-controller', sublabel: 'reconciles MaasTenantConfig', color: '#79c0ff', fs: 13, mig: true },
+  gate:    { x: 520, y: 880, w: 200, h: 60, label: 'Migration Gate', sublabel: 'plugins ConfigMap fingerprint', color: '#79c0ff', fs: 13, mig: true },
+  compat:  { x: 770, y: 880, w: 200, h: 60, label: 'Compat Check', sublabel: 'api-translation bindings', color: '#79c0ff', fs: 13, mig: true },
+  cleanup: { x: 520, y: 985, w: 200, h: 60, label: 'One-shot Cleanup', sublabel: '14 legacy operands', color: '#79c0ff', fs: 13, mig: true },
+  claim:   { x: 770, y: 985, w: 200, h: 60, label: 'AGC Claim', sublabel: 'steady', color: '#f0883e', fs: 13, mig: true },
+
   // External models — far left, outside cluster
   openai:    { x: -40, y: 300, w: 140, h: 55, label: 'OpenAI',       sublabel: 'gpt-4o-mini',      color: '#3fb950', fs: 15 },
   anthropic: { x: -40, y: 365, w: 140, h: 55, label: 'Anthropic',    sublabel: 'claude-haiku-4-5',  color: '#3fb950', fs: 15 },
@@ -277,6 +297,19 @@ const N = {
 };
 
 const tips = {
+  praxis: { t:'praxis-extproc', d:'The praxis dataplane for 3.6 tenants (Tech Preview). Envoy ExtProc gRPC server running praxis filter pipelines — a thin adapter over praxis-ai (pinned upstream v0.6.0, FIPS build). Rendered per tenant by ai-gateway-controller, which reuses the legacy EnvoyFilter names (ext_proc.ipp-pre / ext_proc.ipp).', dt:[['Deployed by','ai-gateway-controller (SSA, per tenant)'],['Image','odh-praxis-extproc (FIPS: responses, aws-sigv4, store-postgres-cert-auth)'],['Phases','request/response headers + body (10 MiB cap)'],['Status','Tech Preview (RHOAI 3.6)']], links:[['praxis-extproc','https://github.com/opendatahub-io/praxis-extproc'],['praxis-ai','https://github.com/praxis-proxy/ai'],['Migration doc','https://github.com/opendatahub-io/praxis-extproc/blob/main/docs/migration-ipp-to-praxis.md']] },
+  pr_mth: { t:'model_to_header', d:'Promotes the body "model" field to a header — the praxis equivalent of model-extractor (body-field-to-header). Runs in the pre-auth chain so Authorino sees the model identity.', dt:[['Chain','pre-auth (ipp-pre)'],['Header','X-Gateway-Model-Name'],['Deployed by AGC','Yes']], links:[['praxis-ai','https://github.com/praxis-proxy/ai']] },
+  pr_llmisvc: { t:'llmisvc_model_provider_resolver', d:'Rewrites model IDs for LLMInferenceService/KServe publisher-ID routing. Deployed by AGC in the pre-auth chain.', dt:[['Chain','pre-auth (ipp-pre)'],['Deployed by AGC','Yes']], links:[['praxis-ai','https://github.com/praxis-proxy/ai']] },
+  pr_ir: { t:'intelligent_route', d:'Edge routing filter consuming a controller-rendered routing overlay (hot reload) — model-header routing to provider hop clusters. Replaces the legacy model-provider-resolver + weighted selection (weights must be uniform; deterministic first-admitted provider order).', dt:[['Chain','post-auth (ipp)'],['Config','controller-rendered overlay, no live CRD watching'],['Deployed by AGC','Yes'],['Note','No runtime failover — NOT IMPLEMENTED IN CODE']], links:[['praxis-ai','https://github.com/praxis-proxy/ai']] },
+  pr_ci: { t:'credential_inject', d:'Injects provider credentials (bearer/API-key) from routing metadata into the upstream request. Security-critical filter.', dt:[['Chain','post-auth (ipp)'],['Deployed by AGC','Yes (when credentials exist)']], links:[['praxis-ai','https://github.com/praxis-proxy/ai']] },
+  pr_resp: { t:'Responses API — runtime status', d:'HONEST STATUS: the Responses core (request kernel, store/rehydrate via cert-auth Postgres, agentic loop, Responses→Chat Completions translation) IS compiled into the deployed praxis image — unused. The gap is purely AGC config/CRD wiring. MCP tools, compaction, Conversations are NOT in the FIPS build. No /v1/responses endpoint is exposed by MaaS in 3.6.', dt:[['In deployed image','request, store/rehydrate, agentic loop, Responses→CC'],['NOT in FIPS build','MCP tools, compact, conversations, file-resolve'],['Wired into MaaS','No — NOT IMPLEMENTED (control plane)']], links:[['praxis-ai responses','https://github.com/praxis-proxy/ai/tree/main/apis/src/openai/responses'],['Design draft (May 2026)','https://github.com/danielezonca/ai-gateway-docs/blob/main/responses-api/index.html']] },
+  agc: { t:'ai-gateway-controller (AGC)', d:'Owns the praxis dataplane for 3.6 tenants: watches MaasTenantConfig CRs, renders per-tenant praxis-extproc manifests into the Gateway namespace (SSA field manager \'ai-gateway-controller\'), generates the routing overlay from ExternalModel/ExternalProvider CRDs, and participates in the migration ownership handshake.', dt:[['Field manager','ai-gateway-controller'],['Owns','praxis ExtProc Deployments, Services, ConfigMaps, EnvoyFilters, DestinationRules'],['Routing','renders overlay for intelligent_route (no live CRD watch in praxis)'],['Handshake','annotation maas.opendatahub.io/payload-processing-status']], links:[['ai-gateway-controller','https://github.com/opendatahub-io/ai-gateway-controller']] },
+  iobj: { t:'InferenceObjective', d:'llm-d-router CR (inferenceobjectives.llm-d.ai) created by the MaaSSubscription controller per (tenant, subscription, InferencePool), carrying request priority from spec.inferencePriority. Added post-3.5 (3.6 dev).', dt:[['Owner','MaaSSubscription controller'],['Feeds','llm-d scheduler request priority'],['Since','3.6-dev (#1616)']], links:[['llm-d','https://github.com/llm-d/llm-d']] },
+  mc: { t:'maas-controller', d:'Reconciles MaasTenantConfig/AITenant into the platform stack. For praxis tenants: skips legacy operand rendering (SkipIPP), runs the one-shot migration (gate → compat → cleanup → cleanup-complete), and never deletes AGC-owned objects (ownership race guard).', dt:[['Field manager','maas-controller'],['Migration trigger','automatic — annotation absent = praxis'],['Never deletes','objects with ai-gateway-controller in managedFields']], links:[['models-as-a-service','https://github.com/opendatahub-io/models-as-a-service']] },
+  gate: { t:'Migration Gate', d:'Fingerprints the live payload-processing-plugins ConfigMap against known-good baselines: "default", "default+response-api-translation", "odh-3.5.0". Recognized → pass; custom/reordered → blocked until maas.opendatahub.io/force-payload-processing-migration=true.', dt:[['Baselines','default, default+response-api-translation, odh-3.5.0'],['Blocked marker','payload-processing-migration = blocked'],['Chains are','order-sensitive']], links:[['upgrade-to-3.6','https://github.com/opendatahub-io/models-as-a-service/blob/main/docs/content/migration/upgrade-to-3.6.md']] },
+  compat: { t:'API-translation Compatibility Check', d:'Per active ExternalModel binding: openai+openai-chat (passthrough) and anthropic+messages (translated by praxis) pass. Azure OpenAI, Vertex, Bedrock, custom, cross-namespace bindings BLOCK cleanup (fail closed). Explicit apiTranslation=false accepts the loss and records a risk marker.', dt:[['Pass','openai (passthrough), anthropic (messages)'],['Block','azure, vertex, bedrock, custom bindings'],['Risk markers','explicit-false, forced (persist after cleanup)'],['Behavior change','Anthropic rejects unmappable CC fields with 400 (3.5 dropped silently)']], links:[['upgrade-to-3.6','https://github.com/opendatahub-io/models-as-a-service/blob/main/docs/content/migration/upgrade-to-3.6.md']] },
+  cleanup: { t:'One-shot Cleanup', d:'Deletes the 14 MaaS-owned legacy operands: payload-processing/pre-processing Deployments (foreground), HPAs, Services, EnvoyFilter, NetworkPolicy, DestinationRules, ServiceAccount, plugins ConfigMap, ClusterRoleBinding — plus IPP-ExternalModel HTTPRoutes and transport Service/ServiceEntry. Runs once; steady-state tenants skip it.', dt:[['Trigger','SkipIPP=true + status annotation absent'],['Proof','IPP writers must stop before deletion'],['Idempotent','one-shot, then cleanup-complete']], links:[['upgrade-to-3.6','https://github.com/opendatahub-io/models-as-a-service/blob/main/docs/content/migration/upgrade-to-3.6.md']] },
+  claim: { t:'AGC Claim (steady)', d:'With cleanup-complete written, AGC deploys and owns the praxis dataplane; the status annotation moves to praxis steady state. Opting back to legacy ("ipp") waits for praxis cleanup before legacy can redeloy.', dt:[['Status values','cleanup-complete / steady / (absent)'],['Opt-back','annotation payload-processing-type = ipp (waits for praxis cleanup)']], links:[['ai-gateway-controller','https://github.com/opendatahub-io/ai-gateway-controller']] },
   gw: { t:'Istio Gateway (Envoy)', d:'Envoy-based reverse proxy that receives all inference requests. Runs Kuadrant Wasm filter for auth/rate-limiting and ext_proc filters for payload processing and scheduling.', dt:[['Filter chain','ext_proc.ipp-pre → wasm auth → header_to_metadata → ext_proc.ipp → EPP ext_proc → router'],['Protocol','HTTP/1.1, HTTP/2, gRPC'],['Routing','External model providers or on-cluster InferencePool'],['Port','8080 (HTTP), 8443 (HTTPS)']], links:[['Kuadrant Docs','https://docs.kuadrant.io'],['Kuadrant Operator','https://github.com/Kuadrant/kuadrant-operator']] },
   p_rguard: { t:'nemo-request-guard', d:'NVIDIA NeMo Guardrails — evaluates content policies on the incoming request. Compiled into the payload-processing binary but NOT in the default profile: enable by editing the per-tenant plugins ConfigMap.', dt:[['Status','Opt-in (not in default profile)'],['Phase','Request'],['Type','ext_proc plugin']], links:[['Plugins (downstream)','https://github.com/opendatahub-io/ai-gateway-payload-processing']] },
   p_hguard: { t:'maas-headers-guard', d:'Captures all x-maas-* headers into CycleState and removes them from the forwarded request, so client-supplied identity headers never reach the provider. Added in 3.5 for body-based routing.', dt:[['Headers','x-maas-* (case-insensitive)'],['Side effect','CycleState["maas-headers"]'],['Since','RHOAI 3.5 (v0.2.1)'],['Phase','Request'],['Type','ext_proc plugin']], links:[['Plugins (downstream)','https://github.com/opendatahub-io/ai-gateway-payload-processing']] },
@@ -519,15 +552,17 @@ function drawBounds() {
   drawContainer('aigw', false);
   // Wasm container
   drawContainer('wasm', glowing.has('wasm'));
-  // Payload Processing container (post-auth stage)
-  drawContainer('ipp', glowing.has('ipp'));
+  // Payload Processing container (post-auth stage, legacy)
+  if (inScene('ipp')) drawContainer('ipp', glowing.has('ipp'));
   // Pre-auth stage container (3.5+)
   if (inScene('pp_pre')) drawContainer('pp_pre', glowing.has('pp_pre'));
+  // praxis-extproc container (3.6 praxis tenants)
+  if (inScene('praxis')) drawContainer('praxis', glowing.has('praxis'));
   // EPP container (llm-d Scheduler)
-  drawContainer('epp', glowing.has('epp'));
+  if (inScene('epp')) drawContainer('epp', glowing.has('epp'));
 
-  // Payload Processing request/response/opt-in plugin sections
-  if (N.ipp) {
+  // Legacy Payload Processing request/response/opt-in plugin sections
+  if (N.ipp && inScene('ipp')) {
     ctx.save();
     // Request plugins section
     ctx.beginPath();
@@ -576,8 +611,59 @@ function drawBounds() {
     ctx.restore();
   }
 
+  // praxis-extproc chain sections (3.6 praxis scene)
+  if (N.praxis && inScene('praxis')) {
+    ctx.save();
+    // Pre-auth chain section
+    ctx.beginPath();
+    ctx.roundRect(tx(758), ty(312), ts(345), ts(110), ts(8));
+    ctx.fillStyle = isDark ? '#f0883e0a' : '#f0883e08';
+    ctx.fill();
+    ctx.strokeStyle = isDark ? '#f0883e40' : '#f0883e35';
+    ctx.lineWidth = ts(1.5);
+    ctx.setLineDash([ts(4), ts(3)]);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.font = `bold ${ts(10)}px system-ui`;
+    ctx.fillStyle = isDark ? '#f0883e99' : '#f0883e99';
+    ctx.textAlign = 'left';
+    ctx.fillText('Pre-auth chain (ipp-pre) →', tx(770), ty(324));
+
+    // Post-auth chain section
+    ctx.beginPath();
+    ctx.roundRect(tx(758), ty(432), ts(345), ts(110), ts(8));
+    ctx.fillStyle = isDark ? '#f0883e0a' : '#f0883e08';
+    ctx.fill();
+    ctx.strokeStyle = isDark ? '#f0883e40' : '#f0883e35';
+    ctx.lineWidth = ts(1.5);
+    ctx.setLineDash([ts(4), ts(3)]);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.font = `bold ${ts(10)}px system-ui`;
+    ctx.fillStyle = isDark ? '#f0883e99' : '#f0883e99';
+    ctx.textAlign = 'left';
+    ctx.fillText('Post-auth chain (ipp) →', tx(770), ty(444));
+    ctx.restore();
+  }
+
+  // Migration control-plane strip boundary (3.6 migration flow)
+  if (inScene('mc')) {
+    ctx.beginPath();
+    ctx.roundRect(tx(200), ty(855), ts(1000), ts(190), ts(10));
+    ctx.strokeStyle = isDark ? '#79c0ff55' : '#79c0ff55';
+    ctx.lineWidth = ts(2);
+    ctx.setLineDash([ts(6), ts(5)]);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.font = `${ts(12)}px system-ui`;
+    ctx.fillStyle = c.dim;
+    ctx.textAlign = 'left';
+    ctx.fillText('Control plane — payload-processing migration (automatic on 3.6 upgrade)', tx(212), ty(873));
+  }
+
   // InferencePool boundary
   const ip = N.pool;
+  if (inScene('pool')) {
   ctx.beginPath();
   ctx.roundRect(tx(ip.x), ty(ip.y), ts(ip.w), ts(ip.h), ts(10));
   ctx.strokeStyle = c.bdr;
@@ -589,6 +675,7 @@ function drawBounds() {
   ctx.fillStyle = c.dim;
   ctx.textAlign = 'left';
   ctx.fillText(ip.label, tx(ip.x + 12), ty(ip.y + 18));
+  } // end pool boundary
 
   // Decode Pod A sub-boundary (left, under sidecar)
   ctx.save();
@@ -909,15 +996,35 @@ class Dot {
 // ================================================================
 // MAIN DRAW LOOP
 // ================================================================
-// Scene node visibility: flow-driven (not version-only — 3.6 hosts both stacks).
-// hiddenByScene: nodes absent from a version's scenes (C3 will make this per-flow).
+// Scene node visibility: flow-driven (3.6 hosts both stacks — one per selected flow).
 const hiddenByScene = {
-  '3.4': ['pp_pre', 'p_ext', 'p_mpr_pre', 'p_hguard', 'p_sue', 'ulogs'],
-  '3.5': ['p_bfth'],
-  '3.6': ['p_bfth'],
+  '3.4': ['pp_pre', 'p_ext', 'p_mpr_pre', 'p_hguard', 'p_sue', 'ulogs', 'praxis', 'pr_mth', 'pr_llmisvc', 'pr_ir', 'pr_ci', 'pr_resp', 'agc', 'iobj', 'mc', 'gate', 'compat', 'cleanup', 'claim'],
+  '3.5': ['p_bfth', 'praxis', 'pr_mth', 'pr_llmisvc', 'pr_ir', 'pr_ci', 'pr_resp', 'agc', 'iobj', 'mc', 'gate', 'compat', 'cleanup', 'claim'],
+};
+// 3.6 per-flow hidden sets (flow-driven)
+const PP_NODES = ['ipp', 'pp_pre', 'p_bfth', 'p_hguard', 'p_sue', 'p_mpr', 'p_at_req', 'p_aki', 'p_at_resp', 'p_rguard', 'p_resp_guard', 'p_bmth', 'p_ext', 'p_mpr_pre'];
+const PRAXIS_NODES = ['praxis', 'pr_mth', 'pr_llmisvc', 'pr_ir', 'pr_ci', 'pr_resp'];
+const POOL_NODES = ['pool', 'sidecar', 'decode', 'nixl', 'prefill', 'epp', 'sched'];
+const PROVIDER_NODES = ['openai', 'anthropic', 'azure', 'bedrock', 'vertex'];
+const STRIP_NODES = ['mc', 'gate', 'compat', 'cleanup', 'claim'];
+const hiddenByScene36 = {
+  // legacy tenant (annotation "ipp"): same scene as 3.5 + InferenceObjective
+  ext: [...PRAXIS_NODES, 'agc', ...STRIP_NODES],
+  inc: [...PRAXIS_NODES, 'agc', ...STRIP_NODES],
+  // praxis tenant (default): praxis dataplane, no legacy stack, no pool (external flow)
+  praxis: [...PP_NODES, ...POOL_NODES, 'iobj', ...STRIP_NODES],
+  // migration: control-plane only
+  mig: ['user', ...PROVIDER_NODES, ...POOL_NODES, 'ulogs', ...PP_NODES.slice(1), ...PRAXIS_NODES.slice(1), 'iobj'],
+  auth: [...PRAXIS_NODES, 'agc', ...STRIP_NODES],
+  rl: [...PRAXIS_NODES, 'agc', ...STRIP_NODES],
 };
 function sceneNodes() {
-  const hidden = hiddenByScene[version];
+  let hidden;
+  if (version === '3.6') {
+    hidden = hiddenByScene36[activeFlow] || [];
+  } else {
+    hidden = hiddenByScene[version] || [];
+  }
   if (!hidden || hidden.length === 0) return null;
   const vis = new Set(Object.keys(N));
   hidden.forEach(k => vis.delete(k));
@@ -1338,6 +1445,118 @@ function inspStepExt35(stepNum) {
   }
 }
 
+// 3.6 praxis tenant flow: 21 steps
+function inspStepPraxis(stepNum) {
+  switch (stepNum) {
+    case 3:
+      inspStepLabel = '③ model_to_header: body model → header';
+      inspHeaders.push({ v: 'X-Gateway-Model-Name: claude-haiku-4-5-20251001', s: 'add', id: 'h-xmodel' });
+      break;
+    case 4:
+      inspStepLabel = '④ llmisvc_model_provider_resolver';
+      inspCycle = [
+        { v: 'publisher-id rewrite for LLMInferenceService', s: 'add', id: 'c-prov' },
+      ];
+      break;
+    case 8:
+      inspStepLabel = '⑧ POST /internal/v1/api-keys/validate';
+      break;
+    case 9:
+      inspStepLabel = '⑨ POST /internal/v1/subscriptions/select';
+      break;
+    case 10:
+      inspStepLabel = '⑩ Identity: subscription + rate-limit id';
+      inspHeaders.push({ v: 'X-MaaS-Username: cluster-admin', s: 'add', id: 'h-maas-user' });
+      inspHeaders.push({ v: 'X-MaaS-Subscription: ext-models-sub', s: 'add', id: 'h-maas-sub' });
+      break;
+    case 14:
+      inspStepLabel = '⑭ intelligent_route (routing overlay, hot reload)';
+      inspCycle = [
+        { v: 'provider = "anthropic" (overlay)', s: 'add', id: 'c-prov' },
+        { v: 'cluster: provider-hop (Envoy)', s: 'add', id: 'c-model' },
+      ];
+      break;
+    case 15:
+      inspStepLabel = '⑮ credential_inject';
+      inspHeaders.push({ v: 'x-api-key: sk-ant-api03-xxxxx...', s: 'add', id: 'h-xapi' });
+      break;
+    case 18:
+      inspStepLabel = '⑱ Anthropic responds (passthrough)';
+      setInspPhase('response');
+      inspHeaders = [
+        { v: 'HTTP/1.1 200 OK', s: 'keep', id: 'r-status' },
+        { v: 'Content-Type: application/json', s: 'keep', id: 'r-ct' },
+      ];
+      inspBody = [
+        { v: '"object": "chat.completion"', s: 'keep', id: 'r-obj' },
+        { v: '"choices": [{"message":{"content":"Hello!"}}]', s: 'keep', id: 'r-choices' },
+        { v: '"usage": {"prompt_tokens":8,"completion_tokens":2,"total_tokens":10}', s: 'keep', id: 'r-usage2' },
+      ];
+      inspCycle = [];
+      break;
+    case 19: {
+      inspStepLabel = '⑲ Wasm reads usage.total_tokens';
+      const u = inspBody.find(l => l.id === 'r-usage2');
+      if (u) u.s = 'highlight';
+      break; }
+    case 20:
+      inspStepLabel = '⑳ Usage log: tokens_total=10, model, subscription → OTLP';
+      break;
+    case 21: {
+      inspStepLabel = '㉑ Response to Client (OpenAI format)';
+      const rc = inspBody.find(l => l.id === 'r-choices');
+      if (rc) rc.s = 'highlight';
+      break; }
+  }
+}
+
+// 3.6 migration flow: 16 steps (control plane)
+function inspStepMig(stepNum) {
+  switch (stepNum) {
+    case 1:
+      inspStepLabel = '① Upgrade to 3.6 — payload-processing-type absent → praxis';
+      inspHeaders = [{ v: 'annotation maas.opendatahub.io/payload-processing-type: <absent>', s: 'add', id: 'h-anno' }];
+      inspBody = [];
+      inspCycle = [];
+      break;
+    case 2:
+      inspStepLabel = '② SkipIPP=true — legacy operands not rendered';
+      break;
+    case 4:
+      inspStepLabel = '④ Fingerprint matches a known-good baseline';
+      inspBody = [{ v: 'baseline: "odh-3.5.0" → recognized', s: 'add', id: 'b-base' }];
+      break;
+    case 5:
+      inspStepLabel = '⑤ Blocked — set force-payload-processing-migration=true to override';
+      inspBody = [{ v: 'annotation payload-processing-migration = blocked', s: 'add', id: 'b-block' }];
+      break;
+    case 7:
+      inspStepLabel = '⑦ openai: passthrough · anthropic+messages: translated by praxis';
+      break;
+    case 8:
+      inspStepLabel = '⑧ These providers block cleanup (fail closed)';
+      break;
+    case 9:
+      inspStepLabel = '⑨ spec.apiTranslation.enabled persisted; risk markers recorded';
+      break;
+    case 11:
+      inspStepLabel = '⑪ Deployments, HPAs, Services, EnvoyFilter, NetworkPolicies, ConfigMap…';
+      break;
+    case 12:
+      inspStepLabel = '⑫ managedFields: ai-gateway-controller → do not delete';
+      break;
+    case 13:
+      inspStepLabel = '⑬ payload-processing-status = cleanup-complete';
+      break;
+    case 15:
+      inspStepLabel = '⑮ AGC watches the annotation and claims (steady)';
+      break;
+    case 16:
+      inspStepLabel = '⑯ praxis-extproc serving — migration done';
+      break;
+  }
+}
+
 function inspStepInc34(stepNum) {
   switch (stepNum) {
     case 10:
@@ -1574,7 +1793,7 @@ function inspStepInc35(stepNum) {
 const inspFns = {
   '3.4': { ext: inspStepExt34, inc: inspStepInc34, auth: inspStepAuth, rl: inspStepRL },
   '3.5': { ext: inspStepExt35, inc: inspStepInc35, auth: inspStepAuth, rl: inspStepRL },
-  '3.6': { ext: inspStepExt35, inc: inspStepInc35, auth: inspStepAuth, rl: inspStepRL },
+  '3.6': { ext: inspStepExt35, inc: inspStepInc35, praxis: inspStepPraxis, mig: inspStepMig, auth: inspStepAuth, rl: inspStepRL },
 };
 
 function inspStep(stepNum) {
@@ -1589,6 +1808,51 @@ function inspStep(stepNum) {
 // ================================================================
 let activeFlow = 'ext';
 // 3.4: single post-auth ext_proc stage, 4 plugins (v0.1.1)
+// 3.6 praxis tenant (default): thin AGC-deployed chain (ai-gateway-controller renders)
+const flowPraxis = [
+  { t: '1. Client sends POST /v1/chat/completions', mode: 'arrow', f: 'user', to: 'gw', c: '#58a6ff', num: 1, fromRight: true, toLeft: true, yOff: -10 },
+  { t: '2. Gateway → praxis pre-ext_proc (before auth)', mode: 'arrow', f: 'gw', to: 'praxis', c: '#f0883e', num: 2, glow: 'praxis', fromBottom: true, fromXOff: 85, toTop: true, toXOff: -170 },
+  { t: '3. model_to_header: model → X-Gateway-Model-Name', mode: 'lightup', target: 'pr_mth', badge: 3 },
+  { t: '4. llmisvc_model_provider_resolver: LLMInferenceService routing', mode: 'lightup', target: 'pr_llmisvc', badge: 4 },
+  { t: '5. praxis pre → Gateway (model headers set)', mode: 'arrow', f: 'praxis', to: 'gw', c: '#f0883e', num: 5, fromTop: true, fromXOff: -120, toBottom: true, toXOff: 135 },
+  { t: '6. Gateway → Kuadrant Wasm Shim', mode: 'arrow', f: 'gw', to: 'wasm', c: '#58a6ff', num: 6, glow: 'wasm', fromBottom: true, fromXOff: -100, toTop: true, toXOff: -20 },
+  { t: '7. Authorino validates API key', mode: 'lightup', target: 'auth', badge: 7 },
+  { t: '8. Authorino → MaaS API: validate key', mode: 'arrow', f: 'wasm', to: 'maas', c: '#58a6ff', num: 8, fromBottom: true, fromXOff: -30, toTop: true, toXOff: -50 },
+  { t: '9. Authorino → MaaS API: select subscription', mode: 'arrow', f: 'wasm', to: 'maas', c: '#58a6ff', num: 9, fromBottom: true, fromXOff: 30, toTop: true, toXOff: 50 },
+  { t: '10. MaaS API responds: identity + subscription + rate-limit id', mode: 'arrow', f: 'maas', to: 'wasm', c: '#58a6ff', num: 10, fromTop: true, fromXOff: 0, toBottom: true, toXOff: 0 },
+  { t: '11. Rate Limit checks token quota (Kuadrant TRLP unchanged)', mode: 'lightup', target: 'rlimit', badge: 11 },
+  { t: '12. Kuadrant → Gateway (auth complete)', mode: 'arrow', f: 'wasm', to: 'gw', c: '#58a6ff', num: 12, fromTop: true, fromXOff: 20, toBottom: true, toXOff: -50 },
+  { t: '13. Gateway → praxis post-auth ext_proc', mode: 'arrow', f: 'gw', to: 'praxis', c: '#f0883e', num: 13, glow: 'praxis', fromBottom: true, fromXOff: 205, toTop: true, toXOff: -50 },
+  { t: '14. intelligent_route: routing overlay → provider hop', mode: 'lightup', target: 'pr_ir', badge: 14 },
+  { t: '15. credential_inject: provider credential from routing metadata', mode: 'lightup', target: 'pr_ci', badge: 15 },
+  { t: '16. praxis → Gateway (routed request)', mode: 'arrow', f: 'praxis', to: 'gw', c: '#f0883e', num: 16, fromTop: true, fromXOff: 20, toBottom: true, toXOff: 275 },
+  { t: '17. Gateway routes to Anthropic', mode: 'arrow', f: 'gw', to: 'anthropic', c: '#58a6ff', num: 17, fromLeft: true, toRight: true, yOff: -10 },
+  { t: '18. Anthropic responds (OpenAI-compatible passthrough)', mode: 'arrow', f: 'anthropic', to: 'gw', c: '#3fb950', num: 18, fromRight: true, toLeft: true, yOff: 10 },
+  { t: '19. Wasm reads usage.total_tokens from response', mode: 'lightup', target: 'rlimit', badge: 19 },
+  { t: '20. Usage log emitted: model, tokens, identity → OTLP', mode: 'lightup', target: 'ulogs', badge: 20 },
+  { t: '21. Response to client (OpenAI format)', mode: 'arrow', f: 'gw', to: 'user', c: '#3fb950', num: 21, fromLeft: true, toRight: true, yOff: 10 },
+];
+
+// 3.6 migration: control-plane state machine (automatic on upgrade — no operator action)
+const flowMig = [
+  { t: '1. Cluster upgraded to RHOAI 3.6 — annotation absent → praxis is default', mode: 'lightup', target: 'gw', badge: 1 },
+  { t: '2. maas-controller reconciles MaasTenantConfig (SkipIPP=true)', mode: 'lightup', target: 'mc', badge: 2 },
+  { t: '3. maas-controller → migration gate', mode: 'arrow', f: 'mc', to: 'gate', c: '#79c0ff', num: 3, fromRight: true, toLeft: true },
+  { t: '4. Gate: fingerprint plugins ConfigMap (default / default+response / odh-3.5.0 baselines pass)', mode: 'lightup', target: 'gate', badge: 4 },
+  { t: '5. Custom or reordered ConfigMap → blocked (force annotation to override)', mode: 'lightup', target: 'gate', badge: 5, errColor: '#f85149' },
+  { t: '6. Gate → api-translation compatibility check', mode: 'arrow', f: 'gate', to: 'compat', c: '#79c0ff', num: 6, fromRight: true, toLeft: true, yOff: 20 },
+  { t: '7. Compat: openai (passthrough) + anthropic (messages) bindings pass', mode: 'lightup', target: 'compat', badge: 7 },
+  { t: '8. Azure / Vertex / Bedrock / custom bindings → migration blocked', mode: 'lightup', target: 'compat', badge: 8, errColor: '#f85149' },
+  { t: '9. Persist apiTranslation intent; risk markers (explicit-false / forced)', mode: 'lightup', target: 'compat', badge: 9 },
+  { t: '10. Compat → one-shot cleanup', mode: 'arrow', f: 'compat', to: 'cleanup', c: '#79c0ff', num: 10, fromBottom: true, fromXOff: 0, toTop: true, toXOff: 0 },
+  { t: '11. Cleanup: delete 14 legacy operands, HTTPRoutes, transport services', mode: 'lightup', target: 'cleanup', badge: 11 },
+  { t: '12. Ownership guard: AGC-owned objects at same names survive', mode: 'lightup', target: 'cleanup', badge: 12 },
+  { t: '13. maas-controller writes cleanup-complete annotation', mode: 'arrow', f: 'cleanup', to: 'mc', c: '#79c0ff', num: 13, fromLeft: true, toRight: true, yOff: 30 },
+  { t: '14. AGC renders praxis-extproc manifests (SSA, per tenant)', mode: 'arrow', f: 'mc', to: 'agc', c: '#f0883e', num: 14, fromTop: true, fromXOff: 40, toBottom: true, toXOff: 20 },
+  { t: '15. AGC claims the dataplane (steady)', mode: 'lightup', target: 'agc', badge: 15 },
+  { t: '16. praxis dataplane live', mode: 'arrow', f: 'agc', to: 'praxis', c: '#f0883e', num: 16, fromTop: true, fromXOff: 100, toBottom: true, toXOff: -120 },
+];
+
 const flowExt34 = [
   // REQUEST PATH
   { t: '1. Client sends POST /v1/chat/completions', mode: 'arrow', f: 'user', to: 'gw', c: '#58a6ff', num: 1, fromRight: true, toLeft: true, yOff: -10 },
@@ -1767,12 +2031,12 @@ const versionMeta = {
 const flowSets = {
   '3.4': { ext: flowExt34, inc: flowInc34, auth: flowAuth, rl: flowRL },
   '3.5': { ext: flowExt35, inc: flowInc35, auth: flowAuth, rl: flowRL },
-  '3.6': { ext: flowExt35, inc: flowInc35, auth: flowAuth, rl: flowRL },
+  '3.6': { ext: flowExt35, inc: flowInc35, praxis: flowPraxis, mig: flowMig, auth: flowAuth, rl: flowRL },
 };
 const flowLabelSets = {
   '3.4': { ext: 'External Model (Anthropic)', inc: 'Internal Model (llm-d)', auth: 'Auth Failure (401)', rl: 'Rate Limit (429)' },
   '3.5': { ext: 'External Model (Anthropic)', inc: 'Internal Model (llm-d)', auth: 'Auth Failure (401)', rl: 'Rate Limit (429)' },
-  '3.6': { ext: 'External Model (Anthropic)', inc: 'Internal Model (llm-d)', auth: 'Auth Failure (401)', rl: 'Rate Limit (429)' },
+  '3.6': { ext: 'External — Legacy Tenant ("ipp")', inc: 'Internal — Legacy Tenant ("ipp")', praxis: 'External — Praxis Tenant (default)', mig: 'Migration: Legacy → Praxis', auth: 'Auth Failure (401)', rl: 'Rate Limit (429)' },
 };function flowMapFor(v) { return flowSets[v] || flowSets['3.4']; }
 function flowLabelsFor(v) { return flowLabelSets[v] || flowLabelSets['3.4']; }
 function flowOrderFor(v) { return Object.keys(flowMapFor(v)); }
@@ -1819,7 +2083,7 @@ document.getElementById('version-badge').addEventListener('click', function() {
 function versionChangeSummary(v) {
   if (v === '3.4') return 'RHOAI 3.4 (GA)\n\nSingle post-auth ext_proc stage (4 plugins), per-HTTPRoute AuthPolicies, no usage-logs pipeline.';
   if (v === '3.5') return 'RHOAI 3.5 (GA)\n\nTwo ext_proc stages (pre/post auth), full plugin chain incl. maas-headers-guard and stream-usage-enforcer, response api-translation ON, single gateway AuthPolicy, OTel usage-logs.\n\nNote: initial 3.5.0 shipped without maas-headers-guard/pre-stage model-provider-resolver; this view shows the v0.2.1 (3.5.z) shape.';
-  return 'RHOAI 3.6 (TP)\n\nPer-tenant payload-processing backend: praxis-extproc (default) or legacy payload processing (opt-in \'ipp\'). EPP reorder and InferenceObjectives. Automatic migration on upgrade.';
+  return 'RHOAI 3.6 (TP)\n\nPer-tenant payload-processing backend:\n• praxis-extproc (DEFAULT for new tenants) — rendered by ai-gateway-controller\n• Legacy payload processing — opt-in via annotation \'ipp\' (upgraded tenants keep it until migration)\n\nMigration is AUTOMATIC on upgrade (annotation absent = praxis): ConfigMap fingerprint gate → api-translation compat check → one-shot cleanup → AGC claims.\n\nAlso new: EPP reorder before router, InferenceObjectives, short rate-limit IDs for new subscriptions.\n\nNot in 3.6: fallback/failover routing (not implemented); Responses API not wired into MaaS (runtime support exists in the praxis image — see the ghost card in the praxis flow).';
 }
 
 // ================================================================
