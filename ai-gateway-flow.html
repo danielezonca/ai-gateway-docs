@@ -1079,10 +1079,11 @@ function inspStepRL(stepNum) {
   }
 }
 
-function inspStepInc(stepNum) {
+function inspStepInc34(stepNum) {
   switch (stepNum) {
     case 10:
       inspStepLabel = '⑩ model-extractor: extract model name';
+      inspHeaders.push({ v: 'X-Gateway-Model-Name: llama-3.1-8b', s: 'add', id: 'h-xmodel' });
       break;
     case 11:
       inspStepLabel = '⑪ model-provider-resolver (InferencePool)';
@@ -1092,55 +1093,49 @@ function inspStepInc(stepNum) {
       ];
       break;
     case 12:
-      inspStepLabel = '⑫ body-field-to-header';
-      inspHeaders.push({ v: 'X-Gateway-Model-Name: llama-3.1-8b', s: 'add', id: 'h-xmodel' });
-      break;
-    case 13:
-      inspStepLabel = '⑬ base-model-to-header';
+      inspStepLabel = '⑫ base-model-to-header (opt-in)';
       inspHeaders.push({ v: 'X-Gateway-Base-Model-Name: llama-3.1-8b', s: 'add', id: 'h-xbase' });
       break;
-    case 14: {
-      inspStepLabel = '⑭ IPP → Gateway (request ready)';
+    case 13: {
+      inspStepLabel = '⑬ Payload Processing → Gateway (request ready)';
       const xm = inspHeaders.find(l => l.id === 'h-xmodel');
       if (xm) xm.s = 'highlight';
-      const xb = inspHeaders.find(l => l.id === 'h-xbase');
-      if (xb) xb.s = 'highlight';
       break; }
+    case 14:
+      inspStepLabel = '⑭ Gateway → EPP (ext_proc)';
+      break;
     case 15:
-      inspStepLabel = '⑮ Gateway → EPP (ext_proc)';
+      inspStepLabel = '⑮ EPP selects P/D workers';
       break;
     case 16:
-      inspStepLabel = '⑯ EPP selects P/D workers';
+      inspStepLabel = '⑯ EPP → Gateway (pods selected)';
       break;
     case 17:
-      inspStepLabel = '⑰ EPP → Gateway (pods selected)';
+      inspStepLabel = '⑰ Gateway → Sidecar';
       break;
     case 18:
-      inspStepLabel = '⑱ Gateway → Sidecar';
+      inspStepLabel = '⑱ Sidecar coordinates P/D';
       break;
     case 19:
-      inspStepLabel = '⑲ Sidecar coordinates P/D';
+      inspStepLabel = '⑲ Sidecar → Prefill Pod B';
       break;
     case 20:
-      inspStepLabel = '⑳ Sidecar → Prefill Pod B';
+      inspStepLabel = '⑳ Prefill processing';
       break;
     case 21:
-      inspStepLabel = '㉑ Prefill processing';
+      inspStepLabel = '㉑ Prefill → Sidecar (KV metadata ready)';
       break;
     case 22:
-      inspStepLabel = '㉒ Prefill → Sidecar (KV metadata ready)';
+      inspStepLabel = '㉒ Sidecar → Decode Pod A';
       break;
     case 23:
-      inspStepLabel = '㉓ Sidecar → Decode Pod A';
+      inspStepLabel = '㉓ Decode requests KVs via NIXL';
       break;
     case 24:
-      inspStepLabel = '㉔ Decode requests KVs via NIXL';
+      inspStepLabel = '㉔ NIXL returns KV cache (RDMA)';
       break;
     case 25:
-      inspStepLabel = '㉕ NIXL returns KV cache (RDMA)';
-      break;
-    case 26:
-      inspStepLabel = '㉖ Decode → Gateway (response)';
+      inspStepLabel = '㉕ Decode → Gateway (response)';
       setInspPhase('response');
       inspHeaders = [
         { v: 'HTTP/1.1 200 OK', s: 'keep', id: 'r-status' },
@@ -1154,194 +1149,51 @@ function inspStepInc(stepNum) {
       ];
       inspCycle = [];
       break;
+    case 26:
+      inspStepLabel = '㉖ Gateway → EPP (response)';
+      break;
     case 27:
-      inspStepLabel = '㉗ Gateway → EPP (response)';
+      inspStepLabel = '㉗ EPP response plugins';
       break;
     case 28:
-      inspStepLabel = '㉘ EPP response plugins';
+      inspStepLabel = '㉘ EPP → Gateway (response)';
       break;
     case 29:
-      inspStepLabel = '㉙ EPP → Gateway (response)';
+      inspStepLabel = '㉙ Gateway → Payload Processing (response)';
       break;
     case 30:
-      inspStepLabel = '㉚ Gateway → IPP (response)';
+      inspStepLabel = '㉚ nemo-response-guard (opt-in, not in default profile)';
       break;
-    case 31:
-      inspStepLabel = '㉛ nemo-response-guard (opt-in, not in default profile)';
-      break;
-    case 32: {
-      inspStepLabel = '㉜ IPP → Gateway (response)';
+    case 31: {
+      inspStepLabel = '㉛ Payload Processing → Gateway (response)';
       const ro = inspBody.find(l => l.id === 'r-obj');
       if (ro) ro.s = 'highlight';
       break; }
-    case 33: {
-      inspStepLabel = '㉝ Wasm reads usage.total_tokens';
+    case 32: {
+      inspStepLabel = '㉜ Wasm reads usage.total_tokens';
       const u = inspBody.find(l => l.id === 'r-usage2');
       if (u) u.s = 'highlight';
       break; }
-    case 34:
-      inspStepLabel = '㉞ Limitador: report token count';
+    case 33:
+      inspStepLabel = '㉝ Limitador: report token count';
       break;
-    case 35: {
-      inspStepLabel = '㉟ Response to Client (OpenAI format)';
+    case 34: {
+      inspStepLabel = '㉞ Response to Client (OpenAI format)';
       const rc = inspBody.find(l => l.id === 'r-choices');
       if (rc) rc.s = 'highlight';
       break; }
   }
 }
 
-// Extracted per-flow inspector functions
-// 3.4 ext flow: 21 steps
-function inspStepExt34(stepNum) {
+// 3.5 internal flow: 37 steps — pre-auth, dual callbacks, headers-guard/stream-usage, usage-logs
+function inspStepInc35(stepNum) {
   switch (stepNum) {
-    case 1:
-      inspStepLabel = '① Incoming Request';
-      break;
-    case 2:
-      inspStepLabel = '② Gateway → Kuadrant Wasm Shim';
-      inspHeaders.find(l => l.id === 'h-auth').s = 'highlight';
-      break;
-    case 3:
-      inspStepLabel = '③ Authorino validates API key';
-      inspHeaders.find(l => l.id === 'h-auth').s = 'highlight';
-      break;
-    case 4:
-      inspStepLabel = '④ Kuadrant → MaaS API (key validation)';
-      inspHeaders.find(l => l.id === 'h-auth').s = 'highlight';
-      break;
-    case 5:
-      inspStepLabel = '⑤ MaaS API responds: key valid';
-      inspHeaders.find(l => l.id === 'h-auth').s = 'highlight';
-      inspHeaders.push({ v: 'X-MaaS-Username: cluster-admin', s: 'add', id: 'h-maas-user' });
-      inspHeaders.push({ v: 'X-MaaS-Subscription: ext-models-sub', s: 'add', id: 'h-maas-sub' });
-      break;
-    case 6:
-      inspStepLabel = '⑥ Limitador checks token quota';
-      break;
-    case 7:
-      inspStepLabel = '⑦ Kuadrant → Gateway (auth complete)';
-      break;
-    case 8:
-      inspStepLabel = '⑧ Gateway → Payload Processing (ext_proc)';
-      break;
-    case 9:
-      inspStepLabel = '⑨ model-extractor (body-field-to-header)';
-      inspHeaders.push({ v: 'X-Gateway-Model-Name: claude-haiku-4-5-20251001', s: 'add', id: 'h-xmodel' });
-      break;
-    case 10:
-      inspStepLabel = '⑩ model-provider-resolver';
-      inspCycle = [
-        { v: 'provider = "anthropic"', s: 'add', id: 'c-prov' },
-        { v: 'targetModel = "claude-haiku-4-5-20251001"', s: 'add', id: 'c-model' },
-      ];
-      break;
-    case 11:
-      inspStepLabel = '⑪ api-translation (request)';
-      inspHeaders.find(l => l.id === 'h-path').s = 'del';
-      inspHeaders.push({ v: 'POST /v1/messages', s: 'add', id: 'h-path2' });
-      inspHeaders.push({ v: 'anthropic-version: 2023-06-01', s: 'add', id: 'h-aver' });
-      inspHeaders.find(l => l.id === 'h-auth').s = 'del';
-      break;
-    case 12:
-      inspStepLabel = '⑫ apikey-injection';
-      inspHeaders.push({ v: 'x-api-key: sk-ant-api03-xxxxx...', s: 'add', id: 'h-xapi' });
-      break;
-    case 13: {
-      inspStepLabel = '⑬ Payload Processing → Gateway (mutated request)';
-      const ph2 = inspHeaders.find(l => l.id === 'h-path2');
-      if (ph2) ph2.s = 'highlight';
-      const xapi = inspHeaders.find(l => l.id === 'h-xapi');
-      if (xapi) xapi.s = 'highlight';
-      break; }
-    case 14:
-      inspStepLabel = '⑭ Gateway routes to Anthropic';
-      break;
-    case 15:
-      inspStepLabel = '⑮ Anthropic responds';
-      setInspPhase('response');
-      inspHeaders = [
-        { v: 'HTTP/1.1 200 OK', s: 'keep', id: 'r-status' },
-        { v: 'Content-Type: application/json', s: 'keep', id: 'r-ct' },
-      ];
-      inspBody = [
-        { v: '"type": "message"', s: 'keep', id: 'r-type' },
-        { v: '"content": [{"type":"text","text":"Hello!"}]', s: 'keep', id: 'r-content' },
-        { v: '"stop_reason": "end_turn"', s: 'keep', id: 'r-stop' },
-        { v: '"usage": {"input_tokens":8,"output_tokens":2}', s: 'keep', id: 'r-usage' },
-      ];
-      inspCycle = [];
-      break;
-    case 16:
-      inspStepLabel = '⑯ Gateway → Payload Processing (response)';
-      break;
-    case 17:
-      inspStepLabel = '⑰ api-translation (response)';
-      inspBody.find(l => l.id === 'r-type').s = 'del';
-      inspBody.push({ v: '"object": "chat.completion"', s: 'add', id: 'r-obj' });
-      inspBody.find(l => l.id === 'r-content').s = 'del';
-      inspBody.push({ v: '"choices": [{"message":{"content":"Hello!"}}]', s: 'add', id: 'r-choices' });
-      inspBody.find(l => l.id === 'r-stop').s = 'del';
-      inspBody.push({ v: '"finish_reason": "stop"', s: 'add', id: 'r-finish' });
-      inspBody.find(l => l.id === 'r-usage').s = 'del';
-      inspBody.push({ v: '"usage": {"prompt_tokens":8,"completion_tokens":2,"total_tokens":10}', s: 'add', id: 'r-usage2' });
-      break;
-    case 18: {
-      inspStepLabel = '⑱ Payload Processing → Gateway (translated response)';
-      const robj = inspBody.find(l => l.id === 'r-obj');
-      if (robj) robj.s = 'highlight';
-      const rch = inspBody.find(l => l.id === 'r-choices');
-      if (rch) rch.s = 'highlight';
-      break; }
-    case 19: {
-      inspStepLabel = '⑲ Wasm reads usage.total_tokens';
-      const u2 = inspBody.find(l => l.id === 'r-usage2');
-      if (u2) u2.s = 'highlight';
-      break; }
-    case 20:
-      inspStepLabel = '⑳ Limitador: report token count';
-      break;
-    case 21: {
-      inspStepLabel = '㉑ Response to Client (OpenAI format)';
-      const robj2 = inspBody.find(l => l.id === 'r-obj');
-      if (robj2) robj2.s = 'highlight';
-      const rch2 = inspBody.find(l => l.id === 'r-choices');
-      if (rch2) rch2.s = 'highlight';
-      break; }
-  }
-}
-
-// 3.5 ext flow: 27 steps — pre-auth stage, subscription-select, headers-guard, usage-logs
-function inspStepExt35(stepNum) {
-  switch (stepNum) {
-    case 1:
-      inspStepLabel = '① Incoming Request (body-routed model)';
-      break;
-    case 2:
-      inspStepLabel = '② Gateway → Payload Pre-Processing (pre-auth)';
-      break;
     case 3:
       inspStepLabel = '③ model-extractor: body model → header';
-      inspHeaders.push({ v: 'X-Gateway-Model-Name: claude-haiku-4-5-20251001', s: 'add', id: 'h-xmodel' });
+      inspHeaders.push({ v: 'X-Gateway-Model-Name: llama-3.1-8b', s: 'add', id: 'h-xmodel' });
       break;
     case 4:
       inspStepLabel = '④ model-provider-resolver (pre-auth)';
-      inspCycle = [
-        { v: 'provider = "anthropic"', s: 'add', id: 'c-prov' },
-        { v: 'targetModel = "claude-haiku-4-5-20251001"', s: 'add', id: 'c-model' },
-      ];
-      break;
-    case 5:
-      inspStepLabel = '⑤ Pre-Processing → Gateway (model headers set)';
-      break;
-    case 6:
-      inspStepLabel = '⑥ Gateway → Kuadrant (auth sees X-Gateway-Model-Name)';
-      inspHeaders.find(l => l.id === 'h-auth').s = 'highlight';
-      const hx = inspHeaders.find(l => l.id === 'h-xmodel');
-      if (hx) hx.s = 'highlight';
-      break;
-    case 7:
-      inspStepLabel = '⑦ Authorino validates API key';
-      inspHeaders.find(l => l.id === 'h-auth').s = 'highlight';
       break;
     case 8:
       inspStepLabel = '⑧ POST /internal/v1/api-keys/validate';
@@ -1352,17 +1204,8 @@ function inspStepExt35(stepNum) {
     case 10:
       inspStepLabel = '⑩ Identity: subscription, rate-limit id, objective';
       inspHeaders.push({ v: 'X-MaaS-Username: cluster-admin', s: 'add', id: 'h-maas-user' });
-      inspHeaders.push({ v: 'X-MaaS-Subscription: ext-models-sub', s: 'add', id: 'h-maas-sub' });
-      inspHeaders.push({ v: 'x-llm-d-inference-objective: ', s: 'add', id: 'h-obj' });
-      break;
-    case 11:
-      inspStepLabel = '⑪ Limitador checks token quota';
-      break;
-    case 12:
-      inspStepLabel = '⑫ Kuadrant → Gateway (auth complete)';
-      break;
-    case 13:
-      inspStepLabel = '⑬ Gateway → Payload Processing (post-auth)';
+      inspHeaders.push({ v: 'X-MaaS-Subscription: int-models-sub', s: 'add', id: 'h-maas-sub' });
+      inspHeaders.push({ v: 'x-llm-d-inference-objective: maas-objective-1', s: 'add', id: 'h-obj' });
       break;
     case 14:
       inspStepLabel = '⑭ maas-headers-guard: strip x-maas-*';
@@ -1375,79 +1218,94 @@ function inspStepExt35(stepNum) {
       inspBody.push({ v: '"stream_options": {"include_usage": true}', s: 'add', id: 'b-so' });
       break;
     case 16:
-      inspStepLabel = '⑯ model-provider-resolver (post-auth)';
+      inspStepLabel = '⑯ model-provider-resolver (InferencePool)';
+      inspCycle = [
+        { v: 'type = "inferencepool"', s: 'add', id: 'c-prov' },
+        { v: 'pool = "vllm-llama3-pool"', s: 'add', id: 'c-model' },
+      ];
       break;
-    case 17:
-      inspStepLabel = '⑰ api-translation (request)';
-      inspHeaders.find(l => l.id === 'h-path').s = 'del';
-      inspHeaders.push({ v: 'POST /v1/messages', s: 'add', id: 'h-path2' });
-      inspHeaders.push({ v: 'anthropic-version: 2023-06-01', s: 'add', id: 'h-aver' });
-      inspHeaders.find(l => l.id === 'h-auth').s = 'del';
-      break;
-    case 18:
-      inspStepLabel = '⑱ apikey-injection';
-      inspHeaders.push({ v: 'x-api-key: sk-ant-api03-xxxxx...', s: 'add', id: 'h-xapi' });
-      break;
-    case 19: {
-      inspStepLabel = '⑲ Payload Processing → Gateway (mutated request)';
-      const ph2 = inspHeaders.find(l => l.id === 'h-path2');
-      if (ph2) ph2.s = 'highlight';
-      const xapi = inspHeaders.find(l => l.id === 'h-xapi');
-      if (xapi) xapi.s = 'highlight';
+    case 17: {
+      inspStepLabel = '⑰ Payload Processing → Gateway (request ready)';
+      const xm = inspHeaders.find(l => l.id === 'h-xmodel');
+      if (xm) xm.s = 'highlight';
       break; }
+    case 18:
+      inspStepLabel = '⑱ Gateway → EPP (ext_proc)';
+      break;
+    case 19:
+      inspStepLabel = '⑲ EPP selects P/D workers';
+      break;
     case 20:
-      inspStepLabel = '⑳ Gateway routes to Anthropic';
+      inspStepLabel = '⑳ EPP → Gateway (pods selected)';
       break;
     case 21:
-      inspStepLabel = '㉑ Anthropic responds';
+      inspStepLabel = '㉑ Gateway → Sidecar';
+      break;
+    case 22:
+      inspStepLabel = '㉒ Sidecar coordinates P/D';
+      break;
+    case 23:
+      inspStepLabel = '㉓ Sidecar → Prefill Pod B';
+      break;
+    case 24:
+      inspStepLabel = '㉔ Prefill processing';
+      break;
+    case 25:
+      inspStepLabel = '㉕ Prefill → Sidecar (KV metadata ready)';
+      break;
+    case 26:
+      inspStepLabel = '㉖ Sidecar → Decode Pod A';
+      break;
+    case 27:
+      inspStepLabel = '㉗ Decode requests KVs via NIXL';
+      break;
+    case 28:
+      inspStepLabel = '㉘ NIXL returns KV cache (RDMA)';
+      break;
+    case 29:
+      inspStepLabel = '㉙ Decode → Gateway (response)';
       setInspPhase('response');
       inspHeaders = [
         { v: 'HTTP/1.1 200 OK', s: 'keep', id: 'r-status' },
         { v: 'Content-Type: application/json', s: 'keep', id: 'r-ct' },
       ];
       inspBody = [
-        { v: '"type": "message"', s: 'keep', id: 'r-type' },
-        { v: '"content": [{"type":"text","text":"Hello!"}]', s: 'keep', id: 'r-content' },
-        { v: '"stop_reason": "end_turn"', s: 'keep', id: 'r-stop' },
-        { v: '"usage": {"input_tokens":8,"output_tokens":2}', s: 'keep', id: 'r-usage' },
+        { v: '"object": "chat.completion"', s: 'keep', id: 'r-obj' },
+        { v: '"choices": [{"message":{"content":"Hello!"}}]', s: 'keep', id: 'r-choices' },
+        { v: '"finish_reason": "stop"', s: 'keep', id: 'r-finish' },
+        { v: '"usage": {"prompt_tokens":8,"completion_tokens":2,"total_tokens":10}', s: 'keep', id: 'r-usage2' },
       ];
       inspCycle = [];
       break;
-    case 22:
-      inspStepLabel = '㉒ Gateway → Payload Processing (response)';
+    case 30:
+      inspStepLabel = '㉚ Gateway → EPP (response)';
       break;
-    case 23:
-      inspStepLabel = '㉓ api-translation (response)';
-      inspBody.find(l => l.id === 'r-type').s = 'del';
-      inspBody.push({ v: '"object": "chat.completion"', s: 'add', id: 'r-obj' });
-      inspBody.find(l => l.id === 'r-content').s = 'del';
-      inspBody.push({ v: '"choices": [{"message":{"content":"Hello!"}}]', s: 'add', id: 'r-choices' });
-      inspBody.find(l => l.id === 'r-stop').s = 'del';
-      inspBody.push({ v: '"finish_reason": "stop"', s: 'add', id: 'r-finish' });
-      inspBody.find(l => l.id === 'r-usage').s = 'del';
-      inspBody.push({ v: '"usage": {"prompt_tokens":8,"completion_tokens":2,"total_tokens":10}', s: 'add', id: 'r-usage2' });
+    case 31:
+      inspStepLabel = '㉛ EPP response plugins';
       break;
-    case 24: {
-      inspStepLabel = '㉔ Payload Processing → Gateway (translated response)';
-      const robj = inspBody.find(l => l.id === 'r-obj');
-      if (robj) robj.s = 'highlight';
-      const rch = inspBody.find(l => l.id === 'r-choices');
-      if (rch) rch.s = 'highlight';
+    case 32:
+      inspStepLabel = '㉜ EPP → Gateway (response)';
+      break;
+    case 33:
+      inspStepLabel = '㉝ Gateway → Payload Processing (response)';
+      break;
+    case 34: {
+      inspStepLabel = '㉞ Payload Processing → Gateway (response)';
+      const ro = inspBody.find(l => l.id === 'r-obj');
+      if (ro) ro.s = 'highlight';
       break; }
-    case 25: {
-      inspStepLabel = '㉕ Wasm reads usage.total_tokens';
-      const u2 = inspBody.find(l => l.id === 'r-usage2');
-      if (u2) u2.s = 'highlight';
+    case 35: {
+      inspStepLabel = '㉟ Wasm reads usage.total_tokens';
+      const u = inspBody.find(l => l.id === 'r-usage2');
+      if (u) u.s = 'highlight';
       break; }
-    case 26:
-      inspStepLabel = '㉖ Usage log: tokens_total=10, model, subscription → OTLP';
+    case 36:
+      inspStepLabel = '㊱ Usage log: tokens_total=10, model, subscription → OTLP';
       break;
-    case 27: {
-      inspStepLabel = '㉗ Response to Client (OpenAI format)';
-      const robj2 = inspBody.find(l => l.id === 'r-obj');
-      if (robj2) robj2.s = 'highlight';
-      const rch2 = inspBody.find(l => l.id === 'r-choices');
-      if (rch2) rch2.s = 'highlight';
+    case 37: {
+      inspStepLabel = '㊲ Response to Client (OpenAI format)';
+      const rc = inspBody.find(l => l.id === 'r-choices');
+      if (rc) rc.s = 'highlight';
       break; }
   }
 }
@@ -1455,9 +1313,9 @@ function inspStepExt35(stepNum) {
 // Version-aware inspector dispatch: composite version:flow key
 // C2: ext flows are version-specific; inc/auth/rl follow in C2b
 const inspFns = {
-  '3.4': { ext: inspStepExt34, inc: inspStepInc, auth: inspStepAuth, rl: inspStepRL },
-  '3.5': { ext: inspStepExt35, inc: inspStepInc, auth: inspStepAuth, rl: inspStepRL },
-  '3.6': { ext: inspStepExt35, inc: inspStepInc, auth: inspStepAuth, rl: inspStepRL },
+  '3.4': { ext: inspStepExt34, inc: inspStepInc34, auth: inspStepAuth, rl: inspStepRL },
+  '3.5': { ext: inspStepExt35, inc: inspStepInc35, auth: inspStepAuth, rl: inspStepRL },
+  '3.6': { ext: inspStepExt35, inc: inspStepInc35, auth: inspStepAuth, rl: inspStepRL },
 };
 
 function inspStep(stepNum) {
@@ -1537,8 +1395,7 @@ const flowExt35 = [
 ];
 const flowExt = flowExt34;
 
-const flowInc = [
-  // REQUEST PATH (same auth flow)
+const flowInc34 = [
   { t: '1. Client sends POST /v1/chat/completions', mode: 'arrow', f: 'user', to: 'gw', c: '#58a6ff', num: 1, fromRight: true, toLeft: true, yOff: -10 },
   { t: '2. Gateway → Kuadrant Wasm Shim', mode: 'arrow', f: 'gw', to: 'wasm', c: '#58a6ff', num: 2, glow: 'wasm', fromBottom: true, fromXOff: -100, toTop: true, toXOff: -20 },
   { t: '3. Auth (Authorino) validates API key', mode: 'lightup', target: 'auth', badge: 3 },
@@ -1547,36 +1404,72 @@ const flowInc = [
   { t: '6. Rate Limit checks token quota', mode: 'lightup', target: 'rlimit', badge: 6 },
   { t: '7. Kuadrant → Gateway (auth complete)', mode: 'arrow', f: 'wasm', to: 'gw', c: '#58a6ff', num: 7, fromTop: true, fromXOff: 20, toBottom: true, toXOff: -50 },
   { t: '8. Gateway → Payload Processing (ext_proc)', mode: 'arrow', f: 'gw', to: 'ipp', c: '#58a6ff', num: 8, glow: 'ipp', fromBottom: true, fromXOff: 85, toTop: true, toXOff: -170 },
-  // Payload processing plugins (no api-translation, no apikey-injection for on-cluster)
   { t: '9. nemo-request-guard (opt-in, not in default profile)', mode: 'lightup', target: 'p_rguard', badge: 9 },
   { t: '10. model-extractor: extract model name', mode: 'lightup', target: 'p_bfth', badge: 10 },
   { t: '11. model-provider-resolver: resolve InferencePool', mode: 'lightup', target: 'p_mpr', badge: 11 },
   { t: '12. base-model-to-header: resolve LoRA base model (opt-in)', mode: 'lightup', target: 'p_bmth', badge: 12 },
-  { t: '13. stream-usage-enforcer (3.5+)', mode: 'lightup', target: 'p_sue', badge: 13 },
-  { t: '14. Payload Processing → Gateway (request ready)', mode: 'arrow', f: 'ipp', to: 'gw', c: '#58a6ff', num: 14, fromTop: true, fromXOff: -120, toBottom: true, toXOff: 135 },
-  // On-cluster routing
-  { t: '15. Gateway → EPP (ext_proc)', mode: 'arrow', f: 'gw', to: 'sched', c: '#58a6ff', num: 15, glow: 'epp', fromBottom: true, fromXOff: -20, toTop: true, toXOff: -50 },
-  { t: '16. EPP selects P/D workers', mode: 'lightup', target: 'sched', badge: 16 },
-  { t: '17. EPP → Gateway (pods selected)', mode: 'arrow', f: 'sched', to: 'gw', c: '#58a6ff', num: 17, fromTop: true, fromXOff: -20, toBottom: true, toXOff: 15 },
-  { t: '18. Gateway → Sidecar', mode: 'arrow', f: 'gw', to: 'sidecar', c: '#58a6ff', num: 18, fromBottom: true, fromXOff: -35, toTop: true },
-  { t: '19. Sidecar coordinates P/D transaction', mode: 'lightup', target: 'sidecar', badge: 19 },
-  { t: '20. Sidecar → Prefill Pod B', mode: 'arrow', f: 'sidecar', to: 'prefill', c: '#58a6ff', num: 20, fromRight: true, toLeft: true },
-  { t: '21. Prefill processing', mode: 'lightup', target: 'prefill', badge: 21 },
-  { t: '22. Prefill → Sidecar (KV metadata ready)', mode: 'arrow', f: 'prefill', to: 'sidecar', c: '#3fb950', num: 22, fromTop: true, fromXOff: 30, toRight: true },
-  { t: '23. Sidecar → Decode Pod A', mode: 'arrow', f: 'sidecar', to: 'decode', c: '#58a6ff', num: 23, fromLeft: true, toTop: true, toXOff: -60 },
-  { t: '24. Decode requests KVs via NIXL', mode: 'arrow', f: 'decode', to: 'nixl', c: '#8b949e', num: 24, fromRight: true, toLeft: true, yOff: -8 },
-  { t: '25. NIXL returns KV cache (RDMA)', mode: 'arrow', f: 'nixl', to: 'decode', c: '#8b949e', num: 25, fromLeft: true, toRight: true, yOff: 8 },
-  // RESPONSE PATH
-  { t: '26. Decode → Gateway (response)', mode: 'arrow', f: 'decode', to: 'gw', c: '#3fb950', num: 26, fromTop: true, toBottom: true, toXOff: -50 },
-  { t: '27. Gateway → EPP (response processing)', mode: 'arrow', f: 'gw', to: 'sched', c: '#3fb950', num: 27, glow: 'epp', fromBottom: true, fromXOff: 50, toTop: true, toXOff: 20 },
-  { t: '28. EPP response plugins', mode: 'lightup', target: 'sched', badge: 28 },
-  { t: '29. EPP → Gateway (response)', mode: 'arrow', f: 'sched', to: 'gw', c: '#3fb950', num: 29, fromTop: true, fromXOff: 50, toBottom: true, toXOff: 85 },
-  { t: '30. Gateway → Payload Processing (response)', mode: 'arrow', f: 'gw', to: 'ipp', c: '#3fb950', num: 30, fromBottom: true, fromXOff: 205, toTop: true, toXOff: -50 },
-  { t: '31. nemo-response-guard (opt-in, not in default profile)', mode: 'lightup', target: 'p_resp_guard', badge: 31 },
-  { t: '32. Payload Processing → Gateway (response)', mode: 'arrow', f: 'ipp', to: 'gw', c: '#3fb950', num: 32, fromTop: true, fromXOff: 20, toBottom: true, toXOff: 275 },
-  { t: '33. Wasm reads usage.total_tokens', mode: 'lightup', target: 'rlimit', badge: 33 },
-  { t: '34. Wasm reports token count to Limitador', mode: 'lightup', target: 'rlimit', badge: 34 },
-  { t: '35. Response to client (OpenAI format)', mode: 'arrow', f: 'gw', to: 'user', c: '#3fb950', num: 35, fromLeft: true, toRight: true, yOff: 10 },
+  { t: '13. Payload Processing → Gateway (request ready)', mode: 'arrow', f: 'ipp', to: 'gw', c: '#58a6ff', num: 13, fromTop: true, fromXOff: -120, toBottom: true, toXOff: 135 },
+  { t: '14. Gateway → EPP (ext_proc)', mode: 'arrow', f: 'gw', to: 'sched', c: '#58a6ff', num: 14, glow: 'epp', fromBottom: true, fromXOff: -20, toTop: true, toXOff: -50 },
+  { t: '15. EPP selects P/D workers', mode: 'lightup', target: 'sched', badge: 15 },
+  { t: '16. EPP → Gateway (pods selected)', mode: 'arrow', f: 'sched', to: 'gw', c: '#58a6ff', num: 16, fromTop: true, fromXOff: -20, toBottom: true, toXOff: 15 },
+  { t: '17. Gateway → Sidecar', mode: 'arrow', f: 'gw', to: 'sidecar', c: '#58a6ff', num: 17, fromBottom: true, fromXOff: -35, toTop: true },
+  { t: '18. Sidecar coordinates P/D transaction', mode: 'lightup', target: 'sidecar', badge: 18 },
+  { t: '19. Sidecar → Prefill Pod B', mode: 'arrow', f: 'sidecar', to: 'prefill', c: '#58a6ff', num: 19, fromRight: true, toLeft: true },
+  { t: '20. Prefill processing', mode: 'lightup', target: 'prefill', badge: 20 },
+  { t: '21. Prefill → Sidecar (KV metadata ready)', mode: 'arrow', f: 'prefill', to: 'sidecar', c: '#3fb950', num: 21, fromTop: true, fromXOff: 30, toRight: true },
+  { t: '22. Sidecar → Decode Pod A', mode: 'arrow', f: 'sidecar', to: 'decode', c: '#58a6ff', num: 22, fromLeft: true, toTop: true, toXOff: -60 },
+  { t: '23. Decode requests KVs via NIXL', mode: 'arrow', f: 'decode', to: 'nixl', c: '#8b949e', num: 23, fromRight: true, toLeft: true, yOff: -8 },
+  { t: '24. NIXL returns KV cache (RDMA)', mode: 'arrow', f: 'nixl', to: 'decode', c: '#8b949e', num: 24, fromLeft: true, toRight: true, yOff: 8 },
+  { t: '25. Decode → Gateway (response)', mode: 'arrow', f: 'decode', to: 'gw', c: '#3fb950', num: 25, fromTop: true, toBottom: true, toXOff: -50 },
+  { t: '26. Gateway → EPP (response processing)', mode: 'arrow', f: 'gw', to: 'sched', c: '#3fb950', num: 26, glow: 'epp', fromBottom: true, fromXOff: 50, toTop: true, toXOff: 20 },
+  { t: '27. EPP response plugins', mode: 'lightup', target: 'sched', badge: 27 },
+  { t: '28. EPP → Gateway (response)', mode: 'arrow', f: 'sched', to: 'gw', c: '#3fb950', num: 28, fromTop: true, fromXOff: 50, toBottom: true, toXOff: 85 },
+  { t: '29. Gateway → Payload Processing (response)', mode: 'arrow', f: 'gw', to: 'ipp', c: '#3fb950', num: 29, fromBottom: true, fromXOff: 205, toTop: true, toXOff: -50 },
+  { t: '30. nemo-response-guard (opt-in, not in default profile)', mode: 'lightup', target: 'p_resp_guard', badge: 30 },
+  { t: '31. Payload Processing → Gateway (response)', mode: 'arrow', f: 'ipp', to: 'gw', c: '#3fb950', num: 31, fromTop: true, fromXOff: 20, toBottom: true, toXOff: 275 },
+  { t: '32. Wasm reads usage.total_tokens', mode: 'lightup', target: 'rlimit', badge: 32 },
+  { t: '33. Wasm reports token count to Limitador', mode: 'lightup', target: 'rlimit', badge: 33 },
+  { t: '34. Response to client (OpenAI format)', mode: 'arrow', f: 'gw', to: 'user', c: '#3fb950', num: 34, fromLeft: true, toRight: true, yOff: 10 },
+];
+
+const flowInc35 = [
+  { t: '1. Client sends POST /v1/chat/completions (body-routed model)', mode: 'arrow', f: 'user', to: 'gw', c: '#58a6ff', num: 1, fromRight: true, toLeft: true, yOff: -10 },
+  { t: '2. Gateway → Payload Pre-Processing (before auth)', mode: 'arrow', f: 'gw', to: 'pp_pre', c: '#58a6ff', num: 2, glow: 'pp_pre', fromBottom: true, fromXOff: 15, toTop: true, toXOff: -60 },
+  { t: '3. model-extractor: model → X-Gateway-Model-Name', mode: 'lightup', target: 'p_ext', badge: 3 },
+  { t: '4. model-provider-resolver: resolve model', mode: 'lightup', target: 'p_mpr_pre', badge: 4 },
+  { t: '5. Pre-Processing → Gateway (model headers set)', mode: 'arrow', f: 'pp_pre', to: 'gw', c: '#58a6ff', num: 5, fromTop: true, fromXOff: -40, toBottom: true, toXOff: 80 },
+  { t: '6. Gateway → Kuadrant Wasm Shim (auth sees model header)', mode: 'arrow', f: 'gw', to: 'wasm', c: '#58a6ff', num: 6, glow: 'wasm', fromBottom: true, fromXOff: -100, toTop: true, toXOff: -20 },
+  { t: '7. Authorino validates API key', mode: 'lightup', target: 'auth', badge: 7 },
+  { t: '8. Authorino → MaaS API: validate key', mode: 'arrow', f: 'wasm', to: 'maas', c: '#58a6ff', num: 8, fromBottom: true, fromXOff: -30, toTop: true, toXOff: -50 },
+  { t: '9. Authorino → MaaS API: select subscription', mode: 'arrow', f: 'wasm', to: 'maas', c: '#58a6ff', num: 9, fromBottom: true, fromXOff: 30, toTop: true, toXOff: 50 },
+  { t: '10. MaaS API responds: identity + subscription + rate-limit id', mode: 'arrow', f: 'maas', to: 'wasm', c: '#58a6ff', num: 10, fromTop: true, fromXOff: 0, toBottom: true, toXOff: 0 },
+  { t: '11. Rate Limit checks token quota', mode: 'lightup', target: 'rlimit', badge: 11 },
+  { t: '12. Kuadrant → Gateway (auth complete, identity headers)', mode: 'arrow', f: 'wasm', to: 'gw', c: '#58a6ff', num: 12, fromTop: true, fromXOff: 20, toBottom: true, toXOff: -50 },
+  { t: '13. Gateway → Payload Processing (post-auth)', mode: 'arrow', f: 'gw', to: 'ipp', c: '#58a6ff', num: 13, glow: 'ipp', fromBottom: true, fromXOff: 85, toTop: true, toXOff: -170 },
+  { t: '14. maas-headers-guard: strip x-maas-* headers', mode: 'lightup', target: 'p_hguard', badge: 14 },
+  { t: '15. stream-usage-enforcer: force stream_options.include_usage', mode: 'lightup', target: 'p_sue', badge: 15 },
+  { t: '16. model-provider-resolver: resolve InferencePool', mode: 'lightup', target: 'p_mpr', badge: 16 },
+  { t: '17. Payload Processing → Gateway (request ready)', mode: 'arrow', f: 'ipp', to: 'gw', c: '#58a6ff', num: 17, fromTop: true, fromXOff: -120, toBottom: true, toXOff: 135 },
+  { t: '18. Gateway → EPP (ext_proc)', mode: 'arrow', f: 'gw', to: 'sched', c: '#58a6ff', num: 18, glow: 'epp', fromBottom: true, fromXOff: -20, toTop: true, toXOff: -50 },
+  { t: '19. EPP selects P/D workers', mode: 'lightup', target: 'sched', badge: 19 },
+  { t: '20. EPP → Gateway (pods selected)', mode: 'arrow', f: 'sched', to: 'gw', c: '#58a6ff', num: 20, fromTop: true, fromXOff: -20, toBottom: true, toXOff: 15 },
+  { t: '21. Gateway → Sidecar', mode: 'arrow', f: 'gw', to: 'sidecar', c: '#58a6ff', num: 21, fromBottom: true, fromXOff: -35, toTop: true },
+  { t: '22. Sidecar coordinates P/D transaction', mode: 'lightup', target: 'sidecar', badge: 22 },
+  { t: '23. Sidecar → Prefill Pod B', mode: 'arrow', f: 'sidecar', to: 'prefill', c: '#58a6ff', num: 23, fromRight: true, toLeft: true },
+  { t: '24. Prefill processing', mode: 'lightup', target: 'prefill', badge: 24 },
+  { t: '25. Prefill → Sidecar (KV metadata ready)', mode: 'arrow', f: 'prefill', to: 'sidecar', c: '#3fb950', num: 25, fromTop: true, fromXOff: 30, toRight: true },
+  { t: '26. Sidecar → Decode Pod A', mode: 'arrow', f: 'sidecar', to: 'decode', c: '#58a6ff', num: 26, fromLeft: true, toTop: true, toXOff: -60 },
+  { t: '27. Decode requests KVs via NIXL', mode: 'arrow', f: 'decode', to: 'nixl', c: '#8b949e', num: 27, fromRight: true, toLeft: true, yOff: -8 },
+  { t: '28. NIXL returns KV cache (RDMA)', mode: 'arrow', f: 'nixl', to: 'decode', c: '#8b949e', num: 28, fromLeft: true, toRight: true, yOff: 8 },
+  { t: '29. Decode → Gateway (response)', mode: 'arrow', f: 'decode', to: 'gw', c: '#3fb950', num: 29, fromTop: true, toBottom: true, toXOff: -50 },
+  { t: '30. Gateway → EPP (response processing)', mode: 'arrow', f: 'gw', to: 'sched', c: '#3fb950', num: 30, glow: 'epp', fromBottom: true, fromXOff: 50, toTop: true, toXOff: 20 },
+  { t: '31. EPP response plugins', mode: 'lightup', target: 'sched', badge: 31 },
+  { t: '32. EPP → Gateway (response)', mode: 'arrow', f: 'sched', to: 'gw', c: '#3fb950', num: 32, fromTop: true, fromXOff: 50, toBottom: true, toXOff: 85 },
+  { t: '33. Gateway → Payload Processing (response)', mode: 'arrow', f: 'gw', to: 'ipp', c: '#3fb950', num: 33, fromBottom: true, fromXOff: 205, toTop: true, toXOff: -50 },
+  { t: '34. Payload Processing → Gateway (response, no translation for on-cluster)', mode: 'arrow', f: 'ipp', to: 'gw', c: '#3fb950', num: 34, fromTop: true, fromXOff: 20, toBottom: true, toXOff: 275 },
+  { t: '35. Wasm reads usage.total_tokens', mode: 'lightup', target: 'rlimit', badge: 35 },
+  { t: '36. Usage log emitted: model, tokens, identity → OTLP', mode: 'lightup', target: 'ulogs', badge: 36 },
+  { t: '37. Response to client (OpenAI format)', mode: 'arrow', f: 'gw', to: 'user', c: '#3fb950', num: 37, fromLeft: true, toRight: true, yOff: 10 },
 ];
 
 const flowAuth = [
@@ -1613,9 +1506,9 @@ const versionMeta = {
   '3.6': { label: 'RHOAI 3.6', status: 'TP', tp: true },
 };
 const flowSets = {
-  '3.4': { ext: flowExt34, inc: flowInc, auth: flowAuth, rl: flowRL },
-  '3.5': { ext: flowExt35, inc: flowInc, auth: flowAuth, rl: flowRL },
-  '3.6': { ext: flowExt35, inc: flowInc, auth: flowAuth, rl: flowRL },
+  '3.4': { ext: flowExt34, inc: flowInc34, auth: flowAuth, rl: flowRL },
+  '3.5': { ext: flowExt35, inc: flowInc35, auth: flowAuth, rl: flowRL },
+  '3.6': { ext: flowExt35, inc: flowInc35, auth: flowAuth, rl: flowRL },
 };
 const flowLabelSets = {
   '3.4': { ext: 'External Model (Anthropic)', inc: 'Internal Model (llm-d)', auth: 'Auth Failure (401)', rl: 'Rate Limit (429)' },
