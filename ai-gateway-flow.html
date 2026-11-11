@@ -14,6 +14,18 @@ body.light{background:#fff;color:#24292f}
 body.light .right-panel{background:#f6f8fa;border-color:#d0d7de}
 
 .flow-bar{padding:12px 16px;border-bottom:1px solid #30363d;flex-shrink:0;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+
+/* Version toggle */
+.version-toggle{display:flex;border:1px solid #30363d;border-radius:6px;overflow:hidden;flex-shrink:0}
+.version-toggle .vbtn{padding:7px 12px;border:none;background:#0d1117;color:#8b949e;font-size:13px;font-family:inherit;cursor:pointer;transition:all .15s}
+.version-toggle .vbtn:hover{color:#c9d1d9}
+.version-toggle .vbtn.active{background:#1f6feb33;color:#58a6ff;font-weight:600}
+.version-toggle .vbtn.tp.active{background:#f0883e33;color:#f0883e}
+.version-badge{display:inline-block;padding:2px 10px;border:1px solid #3fb950;border-radius:12px;font-size:11px;font-weight:600;color:#3fb950;cursor:pointer;vertical-align:middle;margin-left:8px}
+.version-badge.tp{border-color:#f0883e;color:#f0883e}
+body.light .version-toggle .vbtn{background:#f6f8fa}
+body.light .version-badge{color:#1a7f37;border-color:#1a7f37}
+body.light .version-badge.tp{color:#bc4c00;border-color:#bc4c00}
 body.light .flow-bar{border-color:#d0d7de}
 .flow-bar select{flex:1;padding:7px 10px;border:1px solid #30363d;border-radius:6px;background:#0d1117;color:#c9d1d9;font-size:13px;font-family:inherit;cursor:pointer}
 body.light .flow-bar select{background:#fff;color:#24292f;border-color:#d0d7de}
@@ -133,10 +145,15 @@ body.light .steps-section::-webkit-scrollbar-thumb,body.light .insp-section::-we
 
 <div class="rh-brand"><img src="redhat-logo.svg" alt="Red Hat"><span>Red Hat</span></div>
 <button class="theme-toggle" id="thm" onclick="toggleTheme()">&#9790;</button>
-<div class="viz-title">AI Inference Gateway &mdash; Flow Visualizer <span id="flow-label" style="font-weight:700;-webkit-text-fill-color:#f0883e"></span></div>
+<div class="viz-title">AI Inference Gateway &mdash; Flow Visualizer <span id="flow-label" style="font-weight:700;-webkit-text-fill-color:#f0883e"></span> <span id="version-badge" class="version-badge" title="Click for version changes"></span></div>
 
 <div class="right-panel">
   <div class="flow-bar">
+    <div class="version-toggle" id="version-toggle">
+      <button data-v="3.4" class="vbtn active">3.4</button>
+      <button data-v="3.5" class="vbtn">3.5</button>
+      <button data-v="3.6" class="vbtn tp">3.6</button>
+    </div>
     <select id="flow-select">
       <option value="ext">External Model (Anthropic)</option>
       <option value="inc">Internal Model (llm-d)</option>
@@ -860,11 +877,18 @@ class Dot {
 // ================================================================
 // MAIN DRAW LOOP
 // ================================================================
+// Scene node visibility: flow-driven (not version-only — 3.6 hosts both stacks).
+// Returns null (= all nodes visible) until per-scene sets land in C2/C3.
+function sceneNodes() {
+  return null;
+}
+
 function draw() {
   ctx.clearRect(0, 0, W, H);
+  const vis = sceneNodes();
   drawBounds();
   drawLines();
-  Object.keys(N).forEach(k => drawBox(k));
+  Object.keys(N).forEach(k => { if (!vis || vis.has(k)) drawBox(k); });
   dots.forEach(d => { d.update(); d.draw(); });
   dots = dots.filter(d => d.alive);
   // Highlight clicked component when overlay is showing
@@ -1125,23 +1149,8 @@ function inspStepInc(stepNum) {
   }
 }
 
-function inspStep(stepNum) {
-  resetStyles();
-  if (stepNum >= 5 && activeFlow === 'auth') {
-    inspStepAuth(stepNum);
-    renderInsp();
-    return;
-  }
-  if (stepNum >= 7 && activeFlow === 'rl') {
-    inspStepRL(stepNum);
-    renderInsp();
-    return;
-  }
-  if (stepNum >= 10 && activeFlow === 'inc') {
-    inspStepInc(stepNum);
-    renderInsp();
-    return;
-  }
+// Extracted per-flow inspector functions (ext flow; was inlined in inspStep)
+function inspStepExt(stepNum) {
   switch (stepNum) {
     case 1:
       inspStepLabel = '① Incoming Request';
@@ -1266,6 +1275,20 @@ function inspStep(stepNum) {
       if (rch2) rch2.s = 'highlight';
       break; }
   }
+}
+
+// Version-aware inspector dispatch: composite version:flow key
+// C1: 3.5/3.6 alias the current (3.4-era) flows until C2/C3 replace them
+const inspFns = {
+  '3.4': { ext: inspStepExt, inc: inspStepInc, auth: inspStepAuth, rl: inspStepRL },
+  '3.5': { ext: inspStepExt, inc: inspStepInc, auth: inspStepAuth, rl: inspStepRL },
+  '3.6': { ext: inspStepExt, inc: inspStepInc, auth: inspStepAuth, rl: inspStepRL },
+};
+
+function inspStep(stepNum) {
+  resetStyles();
+  const fn = (inspFns[version] || {})[activeFlow];
+  if (fn) { fn(stepNum); }
   renderInsp();
 }
 
@@ -1370,13 +1393,73 @@ const flowRL = [
   { t: '9. Gateway → Client: 429 Too Many Requests', mode: 'arrow', f: 'gw', to: 'user', c: '#f85149', num: 9, fromLeft: true, toRight: true, yOff: 10 },
 ];
 
-const flowMap = { ext: flowExt, inc: flowInc, auth: flowAuth, rl: flowRL };
-const flowLabels = { ext: 'External Model (Anthropic)', inc: 'Internal Model (llm-d)', auth: 'Auth Failure (401)', rl: 'Rate Limit (429)' };
-const flowOrder = ['ext', 'inc', 'auth', 'rl'];
-let flow = flowExt;
+// ================================================================
+// VERSION + FLOW REGISTRY
+// C1: per-version flow maps; 3.5/3.6 alias current flows until C2/C3
+// ================================================================
+let version = '3.4';
+const versionMeta = {
+  '3.4': { label: 'RHOAI 3.4', status: 'GA', tp: false },
+  '3.5': { label: 'RHOAI 3.5', status: 'GA', tp: false },
+  '3.6': { label: 'RHOAI 3.6', status: 'TP', tp: true },
+};
+const flowSets = {
+  '3.4': { ext: flowExt, inc: flowInc, auth: flowAuth, rl: flowRL },
+  '3.5': { ext: flowExt, inc: flowInc, auth: flowAuth, rl: flowRL },
+  '3.6': { ext: flowExt, inc: flowInc, auth: flowAuth, rl: flowRL },
+};
+const flowLabelSets = {
+  '3.4': { ext: 'External Model (Anthropic)', inc: 'Internal Model (llm-d)', auth: 'Auth Failure (401)', rl: 'Rate Limit (429)' },
+  '3.5': { ext: 'External Model (Anthropic)', inc: 'Internal Model (llm-d)', auth: 'Auth Failure (401)', rl: 'Rate Limit (429)' },
+  '3.6': { ext: 'External Model (Anthropic)', inc: 'Internal Model (llm-d)', auth: 'Auth Failure (401)', rl: 'Rate Limit (429)' },
+};
+function flowMapFor(v) { return flowSets[v] || flowSets['3.4']; }
+function flowLabelsFor(v) { return flowLabelSets[v] || flowLabelSets['3.4']; }
+function flowOrderFor(v) { return Object.keys(flowMapFor(v)); }
+let flow = flowMapFor(version)['ext'];
 
 function updateTitle() {
-  document.getElementById('flow-label').textContent = '· ' + flowLabels[activeFlow];
+  document.getElementById('flow-label').textContent = '· ' + flowLabelsFor(version)[activeFlow];
+  const vb = document.getElementById('version-badge');
+  const m = versionMeta[version];
+  vb.textContent = m.label + ' ' + m.status;
+  vb.className = 'version-badge' + (m.tp ? ' tp' : '');
+}
+
+function populateFlowSelect() {
+  const sel = document.getElementById('flow-select');
+  const labels = flowLabelsFor(version);
+  sel.innerHTML = '';
+  for (const [k, v] of Object.entries(labels)) {
+    const o = document.createElement('option');
+    o.value = k; o.textContent = v;
+    sel.appendChild(o);
+  }
+}
+
+function setVersion(v) {
+  if (!flowSets[v] || v === version) return;
+  version = v;
+  document.querySelectorAll('#version-toggle .vbtn').forEach(b => b.classList.toggle('active', b.dataset.v === v));
+  const fm = flowMapFor(v);
+  if (!fm[activeFlow]) activeFlow = Object.keys(fm)[0];
+  flow = fm[activeFlow];
+  populateFlowSelect();
+  updateTitle();
+  doReset();
+}
+
+document.getElementById('version-toggle').addEventListener('click', function(e) {
+  const b = e.target.closest('.vbtn');
+  if (b) setVersion(b.dataset.v);
+});
+document.getElementById('version-badge').addEventListener('click', function() {
+  alert(versionChangeSummary(version));
+});
+function versionChangeSummary(v) {
+  if (v === '3.4') return 'RHOAI 3.4 (GA)\n\nSingle post-auth ext_proc stage (4 plugins), per-HTTPRoute AuthPolicies, no usage-logs pipeline.';
+  if (v === '3.5') return 'RHOAI 3.5 (GA)\n\nTwo ext_proc stages (pre/post auth), full plugin chain incl. maas-headers-guard and stream-usage-enforcer, response api-translation ON, single gateway AuthPolicy, OTel usage-logs.\n\nNote: initial 3.5.0 shipped without maas-headers-guard/pre-stage model-provider-resolver; this view shows the v0.2.1 (3.5.z) shape.';
+  return 'RHOAI 3.6 (TP)\n\nPer-tenant payload-processing backend: praxis-extproc (default) or legacy payload processing (opt-in \'ipp\'). EPP reorder and InferenceObjectives. Automatic migration on upgrade.';
 }
 
 // ================================================================
@@ -1430,7 +1513,7 @@ function stepOnce() {
     updatePlayBtn();
     return;
   }
-  const flow = flowMap[activeFlow];
+  const flow = flowMapFor(version)[activeFlow];
   if (runStepIndex === 0) {
     initInspector();
   }
@@ -1477,9 +1560,10 @@ function execStep() {
       running = false; paused = false; updatePlayBtn();
       if (loopMode) {
         stepTimer = setTimeout(() => {
-          const idx = flowOrder.indexOf(activeFlow);
-          activeFlow = flowOrder[(idx + 1) % flowOrder.length];
-          flow = flowMap[activeFlow];
+          const order = flowOrderFor(version);
+          const idx = order.indexOf(activeFlow);
+          activeFlow = order[(idx + 1) % order.length];
+          flow = flowMapFor(version)[activeFlow];
           document.getElementById('flow-select').value = activeFlow;
           updateTitle();
           doReset(); run();
@@ -1635,15 +1719,22 @@ function doReset() {
 
 document.getElementById('flow-select').addEventListener('change', function() {
   activeFlow = this.value;
-  flow = flowMap[activeFlow];
+  flow = flowMapFor(version)[activeFlow];
   updateTitle();
   doReset();
 });
 
 resize();
 initSteps();
+populateFlowSelect();
 updateTitle();
 draw();
+
+// Sync mobile splash badge to the active version
+(function(){
+  const b = document.querySelector('#mobile-splash .badge span');
+  if (b) { const m = versionMeta[version]; b.textContent = m.label; b.parentElement.lastChild.textContent = ' ' + m.status; }
+})();
 
 // Auto-start loop mode on page load
 setTimeout(() => { toggleLoop(); }, 500);
