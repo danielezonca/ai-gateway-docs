@@ -265,7 +265,6 @@ const N = {
   pr_resp:    { x: 770, y: 570, w: 320, h: 64, label: 'Responses API', sublabel: 'in image, not wired (TP)', color: '#8b949e', type: 'plugin', inner: true, fs: 13, ghost: true },
 
   // ===== 3.6: control plane =====
-  agc: { x: 510, y: 500, w: 210, h: 75, label: 'ai-gateway-controller', sublabel: 'renders praxis dataplane', color: '#f0883e', fs: 12, v36: true },
 
 
   // External models — far left, outside cluster
@@ -297,7 +296,6 @@ const tips = {
   pr_ir: { t:'intelligent_route', d:'Edge routing filter consuming a controller-rendered routing overlay (hot reload) — model-header routing to provider hop clusters. Replaces the legacy model-provider-resolver + weighted selection (weights must be uniform; deterministic first-admitted provider order).', dt:[['Chain','post-auth (ipp)'],['Config','controller-rendered overlay, no live CRD watching'],['Deployed by AGC','Yes'],['Note','No runtime failover — NOT IMPLEMENTED IN CODE']], links:[['praxis-ai','https://github.com/praxis-proxy/ai']] },
   pr_ci: { t:'credential_inject', d:'Injects provider credentials (bearer/API-key) from routing metadata into the upstream request. Security-critical filter.', dt:[['Chain','post-auth (ipp)'],['Deployed by AGC','Yes (when credentials exist)']], links:[['praxis-ai','https://github.com/praxis-proxy/ai']] },
   pr_resp: { t:'Responses API — runtime status', d:'HONEST STATUS: the Responses core (request kernel, store/rehydrate via cert-auth Postgres, agentic loop, Responses→Chat Completions translation) IS compiled into the deployed praxis image — unused. The gap is purely AGC config/CRD wiring. MCP tools, compaction, Conversations are NOT in the FIPS build. No /v1/responses endpoint is exposed by MaaS in 3.6.', dt:[['In deployed image','request, store/rehydrate, agentic loop, Responses→CC'],['NOT in FIPS build','MCP tools, compact, conversations, file-resolve'],['Wired into MaaS','No — NOT IMPLEMENTED (control plane)']], links:[['praxis-ai responses','https://github.com/praxis-proxy/ai/tree/main/apis/src/openai/responses'],['Design draft (May 2026)','https://github.com/danielezonca/ai-gateway-docs/blob/main/responses-api/index.html']] },
-  agc: { t:'ai-gateway-controller (AGC)', d:'Owns the praxis dataplane for 3.6 tenants: watches MaasTenantConfig CRs, renders per-tenant praxis-extproc manifests into the Gateway namespace (SSA field manager \'ai-gateway-controller\'), generates the routing overlay from ExternalModel/ExternalProvider CRDs, and participates in the migration ownership handshake.', dt:[['Field manager','ai-gateway-controller'],['Owns','praxis ExtProc Deployments, Services, ConfigMaps, EnvoyFilters, DestinationRules'],['Routing','renders overlay for intelligent_route (no live CRD watch in praxis)'],['Handshake','annotation maas.opendatahub.io/payload-processing-status']], links:[['ai-gateway-controller','https://github.com/opendatahub-io/ai-gateway-controller']] },
   iobj: { t:'InferenceObjective', d:'llm-d-router CR (inferenceobjectives.llm-d.ai) created by the MaaSSubscription controller per (tenant, subscription, InferencePool), carrying request priority from spec.inferencePriority. Added post-3.5 (3.6 dev).', dt:[['Owner','MaaSSubscription controller'],['Feeds','llm-d scheduler request priority'],['Since','3.6-dev (#1616)']], links:[['llm-d','https://github.com/llm-d/llm-d']] },
   gw: { t:'Istio Gateway (Envoy)', d:'Envoy-based reverse proxy that receives all inference requests. Runs Kuadrant Wasm filter for auth/rate-limiting and ext_proc filters for payload processing and scheduling.', dt:[['Filter chain','ext_proc.ipp-pre → wasm auth → header_to_metadata → ext_proc.ipp → EPP ext_proc → router'],['Protocol','HTTP/1.1, HTTP/2, gRPC'],['Routing','External model providers or on-cluster InferencePool'],['Port','8080 (HTTP), 8443 (HTTPS)']], links:[['Kuadrant Docs','https://docs.kuadrant.io'],['Kuadrant Operator','https://github.com/Kuadrant/kuadrant-operator']] },
   p_rguard: { t:'nemo-request-guard', d:'NVIDIA NeMo Guardrails — evaluates content policies on the incoming request. Compiled into the payload-processing binary but NOT in the default profile: enable by editing the per-tenant plugins ConfigMap.', dt:[['Status','Opt-in (not in default profile)'],['Phase','Request'],['Type','ext_proc plugin']], links:[['Plugins (downstream)','https://github.com/opendatahub-io/ai-gateway-payload-processing']] },
@@ -974,8 +972,8 @@ class Dot {
 // Scene node visibility per version (3.6 = praxis dataplane scene: praxis stack +
 // AGC + pool/EPP furniture for the internal flow; legacy stack hidden).
 const hiddenByScene = {
-  '3.4': ['pp_pre', 'p_ext', 'p_mpr_pre', 'p_hguard', 'p_sue', 'ulogs', 'praxis', 'pr_mth', 'pr_llmisvc', 'pr_ir', 'pr_ci', 'pr_resp', 'agc', 'iobj'],
-  '3.5': ['p_bfth', 'praxis', 'pr_mth', 'pr_llmisvc', 'pr_ir', 'pr_ci', 'pr_resp', 'agc', 'iobj'],
+  '3.4': ['pp_pre', 'p_ext', 'p_mpr_pre', 'p_hguard', 'p_sue', 'ulogs', 'praxis', 'pr_mth', 'pr_llmisvc', 'pr_ir', 'pr_ci', 'pr_resp', 'iobj'],
+  '3.5': ['p_bfth', 'praxis', 'pr_mth', 'pr_llmisvc', 'pr_ir', 'pr_ci', 'pr_resp', 'iobj'],
   '3.6': ['ipp', 'pp_pre', 'p_bfth', 'p_hguard', 'p_sue', 'p_mpr', 'p_at_req', 'p_aki', 'p_at_resp', 'p_rguard', 'p_resp_guard', 'p_bmth', 'p_ext', 'p_mpr_pre'],
 };
 function sceneNodes() {
