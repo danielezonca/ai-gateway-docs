@@ -152,7 +152,7 @@ body.light .steps-section::-webkit-scrollbar-thumb,body.light .insp-section::-we
     <div class="version-toggle" id="version-toggle">
       <button data-v="3.4" class="vbtn active">3.4</button>
       <button data-v="3.5" class="vbtn">3.5</button>
-      <button data-v="3.6" class="vbtn tp">3.6</button>
+      <button data-v="3.6" class="vbtn">3.6</button>
     </div>
     <select id="flow-select">
       <option value="ext">External Model (Anthropic)</option>
@@ -256,9 +256,9 @@ const N = {
 
   iobj: { x: 745, y: 775, w: 190, h: 50, label: 'InferenceObjective', sublabel: 'inference priority (3.6)', color: '#79c0ff', fs: 12, v36: true },
 
-  // ===== 3.6: praxis-extproc dataplane (S1 slot, TP amber) =====
-  praxis: { x: 740, y: 260, w: 380, h: 500, type: 'container', label: 'praxis-extproc', sublabel: '(ext_proc, post-auth · Tech Preview)', color: '#f0883e', tp: true },
-  praxis_pre: { x: 510, y: 300, w: 210, h: 175, type: 'container', label: 'praxis-extproc', sublabel: '(ext_proc, pre-auth)', color: '#f0883e', fs: 13, tp: true },
+  // ===== 3.6: praxis-extproc dataplane (S1 slot, amber) =====
+  praxis: { x: 740, y: 260, w: 380, h: 500, type: 'container', label: 'praxis-extproc', sublabel: '(ext_proc, post-auth)', color: '#f0883e', tp: true },
+  praxis_pre: { x: 510, y: 300, w: 210, h: 175, type: 'container', label: 'praxis-extproc', sublabel: '(ext_proc, pre-auth)', color: '#f0883e', fs: 13 },
   pr_mth:     { x: 530, y: 358, w: 170, h: 36, label: 'model_to_header', color: '#f0883e', type: 'plugin', inner: true, fs: 11 },
   pr_llmisvc: { x: 530, y: 400, w: 170, h: 36, label: 'llmisvc_model_provider_resolver', color: '#f0883e', type: 'plugin', inner: true, fs: 9 },
   // Post-auth chain (ExternalModel processor) — deployed order per AGC extprocPostAuthConfig
@@ -268,7 +268,6 @@ const N = {
   pr_at:  { x: 770, y: 444, w: 320, h: 36, label: 'api-translation', sublabel: '(OpenAI → Anthropic, if enabled)', color: '#f0883e', type: 'plugin', inner: true, fs: 12 },
   pr_ci:  { x: 770, y: 482, w: 320, h: 36, label: 'credential_inject', color: '#f0883e', type: 'plugin', inner: true, fs: 13 },
   pr_gr:  { x: 770, y: 520, w: 320, h: 36, label: 'ai_guardrails', sublabel: '(NeMo — shared chain)', color: '#f0883e', type: 'plugin', inner: true, fs: 12 },
-  pr_resp:    { x: 770, y: 590, w: 320, h: 64, label: 'Responses API', sublabel: 'in image, not wired (TP)', color: '#8b949e', type: 'plugin', inner: true, fs: 13, ghost: true },
 
   // ===== 3.6: control plane =====
 
@@ -296,14 +295,13 @@ const N = {
 };
 
 const tips = {
-  praxis_pre: { t:'praxis-extproc (pre-auth)', d:'The pre-auth praxis instance (Deployment payload-pre-processing, config pre-extproc.yaml) — same Envoy filter name and position as the legacy pre-processing stage (envoy.filters.http.ext_proc.ipp-pre, INSERT_BEFORE the Kuadrant wasm filter), so Authorino sees the model headers. Chain: model_to_header, llmisvc_model_provider_resolver.', dt:[['Deployment','payload-pre-processing-{tenantID}'],['Config','pre-extproc.yaml'],['Envoy filter','envoy.filters.http.ext_proc.ipp-pre'],['Since','RHOAI 3.6 (Tech Preview)']], links:[['praxis-extproc','https://github.com/opendatahub-io/praxis-extproc'],['ai-gateway-controller','https://github.com/opendatahub-io/ai-gateway-controller']] },
-  praxis: { t:'praxis-extproc', d:'The post-auth praxis instance for 3.6 tenants (Tech Preview) — Deployment payload-processing, config extproc.yaml. Envoy ExtProc gRPC server running praxis filter pipelines, a thin adapter over praxis-ai (pinned upstream v0.6.0, FIPS build). Like 3.5, TWO instances are deployed (pre-auth + post-auth); rendered per tenant by ai-gateway-controller, reusing the legacy EnvoyFilter names.', dt:[['Deployed by','ai-gateway-controller (SSA, per tenant)'],['Image','odh-praxis-extproc (FIPS: responses, aws-sigv4, store-postgres-cert-auth)'],['Phases','request/response headers + body (10 MiB cap)'],['Status','Tech Preview (RHOAI 3.6)']], links:[['praxis-extproc','https://github.com/opendatahub-io/praxis-extproc'],['praxis-ai','https://github.com/praxis-proxy/ai'],['Migration doc','https://github.com/opendatahub-io/praxis-extproc/blob/main/docs/migration-ipp-to-praxis.md']] },
+  praxis_pre: { t:'praxis-extproc (pre-auth)', d:'The pre-auth praxis instance (Deployment payload-pre-processing, config pre-extproc.yaml) — same Envoy filter name and position as the legacy pre-processing stage (envoy.filters.http.ext_proc.ipp-pre, INSERT_BEFORE the Kuadrant wasm filter), so Authorino sees the model headers. Chain: model_to_header, llmisvc_model_provider_resolver.', dt:[['Deployment','payload-pre-processing-{tenantID}'],['Config','pre-extproc.yaml'],['Envoy filter','envoy.filters.http.ext_proc.ipp-pre'],['Since','RHOAI 3.6']], links:[['praxis-extproc','https://github.com/opendatahub-io/praxis-extproc'],['ai-gateway-controller','https://github.com/opendatahub-io/ai-gateway-controller']] },
+  praxis: { t:'praxis-extproc', d:'The post-auth praxis instance for 3.6 tenants (GA) — Deployment payload-processing, config extproc.yaml. Envoy ExtProc gRPC server running praxis filter pipelines, a thin adapter over praxis-ai (pinned upstream v0.6.0, FIPS build). Like 3.5, TWO instances are deployed (pre-auth + post-auth); rendered per tenant by ai-gateway-controller, reusing the legacy EnvoyFilter names.', dt:[['Deployed by','ai-gateway-controller (SSA, per tenant)'],['Image','odh-praxis-extproc (FIPS: responses, aws-sigv4, store-postgres-cert-auth)'],['Phases','request/response headers + body (10 MiB cap)'],['Status','GA (RHOAI 3.6)']], links:[['praxis-extproc','https://github.com/opendatahub-io/praxis-extproc'],['praxis-ai','https://github.com/praxis-proxy/ai'],['Migration doc','https://github.com/opendatahub-io/praxis-extproc/blob/main/docs/migration-ipp-to-praxis.md']] },
   pr_mth: { t:'model_to_header', d:'Promotes the body "model" field to a header — the praxis equivalent of model-extractor (body-field-to-header). Runs in the pre-auth chain so Authorino sees the model identity.', dt:[['Chain','pre-auth (ipp-pre)'],['Header','X-Gateway-Model-Name'],['Deployed by AGC','Yes']], links:[['praxis-ai','https://github.com/praxis-proxy/ai']] },
   pr_llmisvc: { t:'llmisvc_model_provider_resolver', d:'Rewrites model IDs for LLMInferenceService/KServe publisher-ID routing. Deployed by AGC in the pre-auth chain.', dt:[['Chain','pre-auth (ipp-pre)'],['Deployed by AGC','Yes']], links:[['praxis-ai','https://github.com/praxis-proxy/ai']] },
   pr_hdr: { t:'headers (identity guard)', d:'First filter in the post-auth chain: strips caller credentials (authorization, x-api-key) and all x-maas-* identity headers before routing/credential injection, so injected provider credentials are never clobbered and caller credentials never reach the upstream. Parity with the legacy maas-headers-guard (stronger: also strips caller creds).', dt:[['Chain','post-auth — first'],['Strips','authorization, x-api-key, x-origin-cluster, x-maas-*'],['Shared chain','conditional (skips /maas-api, /v1/models, /v1/subscriptions, /v1/api-keys, /v1/me)']], links:[['ai-gateway-controller','https://github.com/opendatahub-io/ai-gateway-controller']] },
   pr_ir: { t:'intelligent_route', d:'Edge routing filter consuming a controller-rendered routing overlay (hot reload) — model-header routing to provider hop clusters. Selection supports equal-weight random and proportional weightedRandom (CRD weight 0-100 → 1-1000). No live CRD watching; no runtime failover (NOT IMPLEMENTED IN CODE).', dt:[['Chain','post-auth (ipp)'],['Config','controller-rendered overlay, hot reload'],['Weights','random (equal) or weightedRandom (proportional)'],['Providers','openai, anthropic, azure, bedrock-openai (Mantle); sigv4/oauth2 unsupported']], links:[['praxis-ai','https://github.com/praxis-proxy/ai']] },
   pr_ci: { t:'credential_inject', d:'Injects provider credentials (bearer/API-key) from routing metadata into the upstream request. Security-critical filter.', dt:[['Chain','post-auth (ipp)'],['Deployed by AGC','Yes (when credentials exist)']], links:[['praxis-ai','https://github.com/praxis-proxy/ai']] },
-  pr_resp: { t:'Responses API — runtime status', d:'HONEST STATUS: the Responses core (request kernel, store/rehydrate via cert-auth Postgres, agentic loop, Responses→Chat Completions translation) IS compiled into the deployed praxis image — unused. The gap is purely AGC config/CRD wiring. MCP tools, compaction, Conversations are NOT in the FIPS build. No /v1/responses endpoint is exposed by MaaS in 3.6.', dt:[['In deployed image','request, store/rehydrate, agentic loop, Responses→CC'],['NOT in FIPS build','MCP tools, compact, conversations, file-resolve'],['Wired into MaaS','No — NOT IMPLEMENTED (control plane)']], links:[['praxis-ai responses','https://github.com/praxis-proxy/ai/tree/main/apis/src/openai/responses'],['Design draft (May 2026)','https://github.com/danielezonca/ai-gateway-docs/blob/main/responses-api/index.html']] },
   iobj: { t:'InferenceObjective', d:'llm-d-router CR (inferenceobjectives.llm-d.ai) created by the MaaSSubscription controller per (tenant, subscription, InferencePool), carrying request priority from spec.inferencePriority. Added post-3.5 (3.6 dev).', dt:[['Owner','MaaSSubscription controller'],['Feeds','llm-d scheduler request priority'],['Since','3.6-dev (#1616)']], links:[['llm-d','https://github.com/llm-d/llm-d']] },
   pr_at: { t:'api-translation', d:'OpenAI Chat Completions → Anthropic Messages translation, deployed by AGC when the tenant has apiTranslation enabled (MaasTenantConfig.spec.apiTranslation). ExternalModel chain: openai_chat_completions_to_anthropic (+ _stream). Shared chain additionally serves Anthropic-native clients: /v1/messages → chat completions translation + path rewrite. Anthropic rejects unmappable CC fields with 400 (3.5 dropped them silently).', dt:[['Chain','post-auth (conditional on apiTranslation)'],['ExternalModel','openai_chat_completions_to_anthropic(_stream)'],['Shared chain','anthropic_messages_to_chat_completions(_stream) + path_rewrite /v1/messages→/v1/chat/completions'],['Providers','anthropic; azure/bedrock use OpenAI-compatible passthrough (bedrock via Mantle)']], links:[['praxis-ai','https://github.com/praxis-proxy/ai'],['upgrade-to-3.6','https://github.com/opendatahub-io/models-as-a-service/blob/main/docs/content/migration/upgrade-to-3.6.md']] },
   pr_gr: { t:'ai_guardrails', d:'NeMo Guardrails content checks, compiled by AGC from accepted AIGuardrail CRs into the shared post-auth chain (request content evaluation; authenticated against NeMo via kube-rbac-proxy). Runs on the shared processor — internal-model traffic — not on the ExternalModel chain.', dt:[['Chain','post-auth (shared processor)'],['Provider','NeMo (via TrustyAI AIGuardrail CRs)'],['Deployed','Yes — compiled from accepted AIGuardrails (#191)']], links:[['praxis-ai guardrails','https://github.com/praxis-proxy/ai/tree/main/filters/src/guardrails'],['ai-gateway-controller','https://github.com/opendatahub-io/ai-gateway-controller']] },
@@ -970,8 +968,8 @@ class Dot {
 // Scene node visibility per version (3.6 = praxis dataplane scene: praxis stack +
 // AGC + pool/EPP furniture for the internal flow; legacy stack hidden).
 const hiddenByScene = {
-  '3.4': ['pp_pre', 'p_ext', 'p_mpr_pre', 'p_hguard', 'p_sue', 'ulogs', 'praxis', 'praxis_pre', 'pr_mth', 'pr_llmisvc', 'pr_ir', 'pr_ci', 'pr_resp', 'pr_at', 'pr_gr', 'pr_sui', 'pr_hdr', 'iobj'],
-  '3.5': ['p_bfth', 'praxis', 'praxis_pre', 'pr_mth', 'pr_llmisvc', 'pr_ir', 'pr_ci', 'pr_resp', 'pr_at', 'pr_gr', 'pr_sui', 'pr_hdr', 'iobj'],
+  '3.4': ['pp_pre', 'p_ext', 'p_mpr_pre', 'p_hguard', 'p_sue', 'ulogs', 'praxis', 'praxis_pre', 'pr_mth', 'pr_llmisvc', 'pr_ir', 'pr_ci', 'pr_at', 'pr_gr', 'pr_sui', 'pr_hdr', 'iobj'],
+  '3.5': ['p_bfth', 'praxis', 'praxis_pre', 'pr_mth', 'pr_llmisvc', 'pr_ir', 'pr_ci', 'pr_at', 'pr_gr', 'pr_sui', 'pr_hdr', 'iobj'],
   '3.6': ['ipp', 'pp_pre', 'p_bfth', 'p_hguard', 'p_sue', 'p_mpr', 'p_at_req', 'p_aki', 'p_at_resp', 'p_rguard', 'p_resp_guard', 'p_bmth', 'p_ext', 'p_mpr_pre'],
 };
 function sceneNodes() {
@@ -2037,7 +2035,7 @@ let version = '3.4';
 const versionMeta = {
   '3.4': { label: 'RHOAI 3.4', status: 'GA', tp: false },
   '3.5': { label: 'RHOAI 3.5', status: 'GA', tp: false },
-  '3.6': { label: 'RHOAI 3.6', status: 'TP', tp: true },
+  '3.6': { label: 'RHOAI 3.6', status: 'GA', tp: false },
 };
 const flowSets = {
   '3.4': { ext: flowExt34, inc: flowInc34, auth: flowAuth, rl: flowRL },
@@ -2094,7 +2092,7 @@ document.getElementById('version-badge').addEventListener('click', function() {
 function versionChangeSummary(v) {
   if (v === '3.4') return 'RHOAI 3.4 (GA)\n\nSingle post-auth ext_proc stage (4 plugins), per-HTTPRoute AuthPolicies, no usage-logs pipeline.';
   if (v === '3.5') return 'RHOAI 3.5 (GA)\n\nTwo ext_proc stages (pre/post auth), full plugin chain incl. maas-headers-guard and stream-usage-enforcer, response api-translation ON, single gateway AuthPolicy, OTel usage-logs.\n\nNote: initial 3.5.0 shipped without maas-headers-guard/pre-stage model-provider-resolver; this view shows the v0.2.1 (3.5.z) shape.';
-  return 'RHOAI 3.6 (TP)\n\nNew tenants default to the praxis-extproc dataplane, rendered per tenant by ai-gateway-controller (pre-auth: model_to_header, llmisvc_model_provider_resolver; post-auth: intelligent_route, credential_inject). Kuadrant auth/rate-limit and usage-logs are unchanged.\n\nTenants upgraded from 3.5 — or opted back via annotation \'ipp\' — keep running the legacy payload processing unchanged: see the 3.5 toggle. Migration between the two is automatic on upgrade (ConfigMap fingerprint gate → api-translation compat check → one-shot cleanup).\n\nAlso new: EPP reorder before router, InferenceObjectives, short rate-limit IDs for new subscriptions.\n\nNot in 3.6: fallback/failover routing (not implemented); Responses API not wired into MaaS (runtime support exists in the praxis image — see the ghost card).';
+  return 'RHOAI 3.6 (GA)\n\nNew tenants default to the praxis-extproc dataplane, rendered per tenant by ai-gateway-controller (pre-auth: model_to_header, llmisvc_model_provider_resolver; post-auth: intelligent_route, credential_inject). Kuadrant auth/rate-limit and usage-logs are unchanged.\n\nTenants upgraded from 3.5 — or opted back via annotation \'ipp\' — keep running the legacy payload processing unchanged: see the 3.5 toggle. Migration between the two is automatic on upgrade (ConfigMap fingerprint gate → api-translation compat check → one-shot cleanup).\n\nAlso new: EPP reorder before router, InferenceObjectives, short rate-limit IDs for new subscriptions.\n\nNot in 3.6: fallback/failover routing (not implemented in code).';
 }
 
 // ================================================================
