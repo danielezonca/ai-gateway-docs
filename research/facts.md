@@ -78,3 +78,15 @@ Citations: `git show v0.1.1:deployment/base/payload-processing/manager/plugins-c
 - The `enmaas-flow.html` page already models a live praxis dataplane (EnMaaS) with external_metering/PriceTag — decide the relationship between it and the 3.6 story (cross-link vs merge).
 
 Phase A complete → awaiting user review before Phase B design.
+
+## Remote refresh (2026-11-11): AGC origin/main @ 26a4c39 supersedes "thin chain" claims
+
+User-prompted re-check found the ai-gateway-controller clone 69 commits behind. At origin/main the deployed praxis chains are now **rich** — the earlier praxis-inv.md §3 "thin chain" and the parity-ghost design are stale:
+
+- **ExternalModel post-auth chain** (`extprocPostAuthConfig`): `headers` (strips authorization, x-api-key, x-origin-cluster, all x-maas-* — stronger than legacy maas-headers-guard) → `intelligent_route` → `stream_usage_inject` → `api-translation` (`openai_chat_completions_to_anthropic` + `_stream`, conditional on apiTranslation) → `credential_inject`.
+- **Shared post-auth chain** (`sharedExtProcConfig`, internal models): `headers` (conditional, skips management paths) → `request_id` → `stream_usage_inject` → anthropic-native `/v1/messages` translation filters + `path_rewrite` → **`ai_guardrails`** (NeMo, compiled from accepted AIGuardrail CRs, #191; kube-rbac-proxy auth #212).
+- **Providers**: azure/azure-openai (apikey), bedrock-openai via Mantle (#152) now qualified in `StrategyFor`; sigv4/oauth2 still unsupported.
+- **Weights**: proportional `weightedRandom` (CRD 0-100 → 1-1000) now supported (#184) — the "uniform weights only" restriction is gone.
+- Body limits bounded (`max_body_bytes`, no `allow_unbounded_body` post-RHOAIENG-102139); post-auth metrics_auth disabled (no SA token by design).
+
+Visualizer updated accordingly: headers/stream_usage_inject/api-translation/ai_guardrails promoted from ghosts to deployed chain nodes; parity ghost section removed; ext flow = ExternalModel chain (24 steps), inc flow = shared chain (32 steps).
