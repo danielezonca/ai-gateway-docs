@@ -131,9 +131,9 @@ body.light .steps-section::-webkit-scrollbar-thumb,body.light .insp-section::-we
     <h1>AI Inference Gateway<br><span class="grad">MaaS in Action</span></h1>
     <p class="sub">Interactive animated architecture flow<br>for the AI Inference Gateway</p>
     <div class="stats">
-      <div class="stat blue">4 Flows</div>
-      <div class="stat green">5 Providers</div>
-      <div class="stat orange">35 Steps</div>
+      <div class="stat blue">12 Flows</div>
+      <div class="stat green">3 Versions</div>
+      <div class="stat orange">5 Providers</div>
       <div class="stat purple">30+ Components</div>
     </div>
     <div class="laptop-msg">
@@ -192,8 +192,9 @@ body.light .steps-section::-webkit-scrollbar-thumb,body.light .insp-section::-we
   <div class="legend-title">Legend</div>
   <div class="legend-item"><div class="legend-dot" style="background:#58a6ff"></div>Request</div>
   <div class="legend-item"><div class="legend-dot" style="background:#3fb950"></div>Response</div>
-  <div class="legend-item"><div class="legend-dot" style="background:#f0883e"></div>Auth / Rate Limit</div>
-  <div class="legend-item"><div class="legend-dot" style="background:#d2a8ff"></div>IPP Container</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#f0883e"></div>Kuadrant Auth / Rate Limit</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#d2a8ff"></div>Payload Processing</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#f0883e;border-radius:4px"></div>praxis-extproc (3.6)</div>
   <div class="legend-item"><div class="legend-dot" style="background:linear-gradient(90deg,#58a6ff,#3fb950);border-radius:50%"></div>Req / Resp Plugins</div>
   <div style="margin-top:10px;padding-top:8px;border-top:1px solid #30363d;font-size:11px;color:#484f58">Built with <a href="https://noyitz.github.io/flowstory/" target="_blank" style="color:#484f58;text-decoration:none" onmouseover="this.style.color='#58a6ff'" onmouseout="this.style.color='#484f58'">FlowStory</a></div>
 </div>
@@ -440,7 +441,7 @@ function drawBox(key) {
   }
 
   if (isA || hasBadge) {
-    ctx.shadowColor = n.color;
+    ctx.shadowColor = n._pathColor || n.color;
     ctx.shadowBlur = ts(18) * fadeA;
     ctx.globalAlpha = 0.3 + 0.7 * fadeA;
   }
@@ -449,7 +450,7 @@ function drawBox(key) {
   ctx.roundRect(x, y, w, h, ts(8));
   ctx.fillStyle = (isA || hasBadge) ? c.boxA : c.box;
   ctx.fill();
-  ctx.strokeStyle = (isA || hasBadge) ? n.color : c.bdr;
+  ctx.strokeStyle = (isA || hasBadge) ? (n._pathColor || n.color) : c.bdr;
   ctx.lineWidth = ts((isA || hasBadge) ? 2.5 : 1.5);
   if (n.type === 'plugin') { ctx.setLineDash([ts(5), ts(4)]); }
   ctx.stroke();
@@ -2090,9 +2091,9 @@ document.getElementById('version-badge').addEventListener('click', function() {
   alert(versionChangeSummary(version));
 });
 function versionChangeSummary(v) {
-  if (v === '3.4') return 'RHOAI 3.4 (GA)\n\nSingle post-auth ext_proc stage (4 plugins), per-HTTPRoute AuthPolicies, no usage-logs pipeline.';
-  if (v === '3.5') return 'RHOAI 3.5 (GA)\n\nTwo ext_proc stages (pre/post auth), full plugin chain incl. maas-headers-guard and stream-usage-enforcer, response api-translation ON, single gateway AuthPolicy, OTel usage-logs.\n\nNote: initial 3.5.0 shipped without maas-headers-guard/pre-stage model-provider-resolver; this view shows the v0.2.1 (3.5.z) shape.';
-  return 'RHOAI 3.6 (GA)\n\nNew tenants default to the praxis-extproc dataplane, rendered per tenant by ai-gateway-controller (pre-auth: model_to_header, llmisvc_model_provider_resolver; post-auth: intelligent_route, credential_inject). Kuadrant auth/rate-limit and usage-logs are unchanged.\n\nTenants upgraded from 3.5 — or opted back via annotation \'ipp\' — keep running the legacy payload processing unchanged: see the 3.5 toggle. Migration between the two is automatic on upgrade (ConfigMap fingerprint gate → api-translation compat check → one-shot cleanup).\n\nAlso new: EPP reorder before router, InferenceObjectives, short rate-limit IDs for new subscriptions.\n\nNot in 3.6: fallback/failover routing (not implemented in code).';
+  if (v === '3.4') return 'RHOAI 3.4 (GA)\n\nSingle post-auth ext_proc stage (4 plugins), per-HTTPRoute AuthPolicies, no usage-logs pipeline.\n\nCluster resources (owner: maas-controller):\n• payload-processing-{tenant} (Deployment + Service + EnvoyFilter)\n• payload-processing-plugins-{tenant} (ConfigMap)';
+  if (v === '3.5') return 'RHOAI 3.5 (GA)\n\nTwo ext_proc stages (pre/post auth), full plugin chain incl. maas-headers-guard and stream-usage-enforcer, response api-translation ON, single gateway AuthPolicy, OTel usage-logs.\n\nNote: initial 3.5.0 shipped without maas-headers-guard/pre-stage model-provider-resolver; this view shows the v0.2.1 (3.5.z) shape.\n\nCluster resources (owner: maas-controller):\n• payload-pre-processing-{tenant} + payload-processing-{tenant} (Deployments, same IPP binary)\n• payload-processing-plugins-{tenant} (ConfigMap, stamped managed=false after first apply)';
+  return 'RHOAI 3.6 (GA)\n\nNew tenants default to the praxis-extproc dataplane, rendered per tenant by ai-gateway-controller. Pre-auth chain: model_to_header, llmisvc_model_provider_resolver. Post-auth chain: headers (identity guard), intelligent_route, stream_usage_inject, api-translation (conditional), credential_inject; the shared processor (internal models) also runs ai_guardrails. Kuadrant auth/rate-limit and usage-logs are unchanged.\n\nTenants upgraded from 3.5 — or opted back via annotation \'ipp\' — keep running the legacy payload processing unchanged: see the 3.5 toggle. Migration between the two is automatic on upgrade (ConfigMap fingerprint gate → api-translation compat check → one-shot cleanup).\n\nAlso new: EPP reorder before router, InferenceObjectives, short rate-limit IDs for new subscriptions.\n\nNot in 3.6: fallback/failover routing (not implemented in code).\n\nCluster resources — SAME NAMES as 3.5, DIFFERENT owner: payload-pre-processing-{tenant} / payload-processing-{tenant} / payload-processing-plugins-{tenant} are rendered by ai-gateway-controller (SSA field manager) running the praxis-extproc image.';
 }
 
 // ================================================================
@@ -2222,6 +2223,12 @@ function execStep() {
       lines.push(stepLine(s));
       if (s.glow) glowing.add(s.glow);
       activeNodes.add(s.to);
+      // Path-direction coloring: active nodes are stroked with the arrow's
+      // color (request blue / response green) instead of their own color
+      if (s.c) {
+        if (N[s.to]) N[s.to]._pathColor = s.c;
+        if (s.f && N[s.f]) N[s.f]._pathColor = s.c;
+      }
       el.className = 'step done';
       currentStepDone = si + 1;
       saveSnapshot(si);
@@ -2331,7 +2338,7 @@ function jumpToStep(targetStep) {
 }
 
 function doReset() {
-  Object.keys(N).forEach(k => { if (N[k]._origColor) { N[k].color = N[k]._origColor; delete N[k]._origColor; } });
+  Object.keys(N).forEach(k => { if (N[k]._origColor) { N[k].color = N[k]._origColor; delete N[k]._origColor; } if (N[k]._pathColor) delete N[k]._pathColor; });
   running = false;
   paused = false;
   runStepIndex = 0;
