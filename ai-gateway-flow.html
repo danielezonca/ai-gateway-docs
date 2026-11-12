@@ -264,6 +264,11 @@ const N = {
   pr_ir:      { x: 770, y: 330, w: 320, h: 36, label: 'intelligent_route', sublabel: '(routing overlay, hot reload)', color: '#f0883e', type: 'plugin', inner: true, fs: 13 },
   pr_ci:      { x: 770, y: 368, w: 320, h: 36, label: 'credential_inject', color: '#f0883e', type: 'plugin', inner: true, fs: 13 },
   pr_resp:    { x: 770, y: 450, w: 320, h: 64, label: 'Responses API', sublabel: 'in image, not wired (TP)', color: '#8b949e', type: 'plugin', inner: true, fs: 13, ghost: true },
+  // IPP-parity filters: exist in praxis-ai runtime (or AGC scaffolding) but NOT in the deployed chain
+  pr_at:  { x: 770, y: 535, w: 320, h: 36, label: 'api-translation', sublabel: '(anthropic ⇄ OpenAI)', color: '#8b949e', type: 'plugin', inner: true, fs: 12, ghost: true },
+  pr_gr:  { x: 770, y: 573, w: 320, h: 36, label: 'ai_guardrails', sublabel: '(NeMo / TrustyAI)', color: '#8b949e', type: 'plugin', inner: true, fs: 12, ghost: true },
+  pr_ihg: { x: 770, y: 611, w: 320, h: 36, label: 'identity_header_guard', sublabel: '(= maas-headers-guard)', color: '#8b949e', type: 'plugin', inner: true, fs: 12, ghost: true },
+  pr_sui: { x: 770, y: 649, w: 320, h: 36, label: 'stream_usage_inject', sublabel: '(= stream-usage-enforcer)', color: '#8b949e', type: 'plugin', inner: true, fs: 12, ghost: true },
 
   // ===== 3.6: control plane =====
 
@@ -299,6 +304,10 @@ const tips = {
   pr_ci: { t:'credential_inject', d:'Injects provider credentials (bearer/API-key) from routing metadata into the upstream request. Security-critical filter.', dt:[['Chain','post-auth (ipp)'],['Deployed by AGC','Yes (when credentials exist)']], links:[['praxis-ai','https://github.com/praxis-proxy/ai']] },
   pr_resp: { t:'Responses API — runtime status', d:'HONEST STATUS: the Responses core (request kernel, store/rehydrate via cert-auth Postgres, agentic loop, Responses→Chat Completions translation) IS compiled into the deployed praxis image — unused. The gap is purely AGC config/CRD wiring. MCP tools, compaction, Conversations are NOT in the FIPS build. No /v1/responses endpoint is exposed by MaaS in 3.6.', dt:[['In deployed image','request, store/rehydrate, agentic loop, Responses→CC'],['NOT in FIPS build','MCP tools, compact, conversations, file-resolve'],['Wired into MaaS','No — NOT IMPLEMENTED (control plane)']], links:[['praxis-ai responses','https://github.com/praxis-proxy/ai/tree/main/apis/src/openai/responses'],['Design draft (May 2026)','https://github.com/danielezonca/ai-gateway-docs/blob/main/responses-api/index.html']] },
   iobj: { t:'InferenceObjective', d:'llm-d-router CR (inferenceobjectives.llm-d.ai) created by the MaaSSubscription controller per (tenant, subscription, InferencePool), carrying request priority from spec.inferencePriority. Added post-3.5 (3.6 dev).', dt:[['Owner','MaaSSubscription controller'],['Feeds','llm-d scheduler request priority'],['Since','3.6-dev (#1616)']], links:[['llm-d','https://github.com/llm-d/llm-d']] },
+  pr_at: { t:'api-translation (not deployed)', d:'IPP-parity gap: praxis-ai implements Anthropic⇄OpenAI translation (anthropic_messages_to_chat_completions, non-stream + SSE), but AGC does NOT render any translation filter into the deployed chain at this snapshot. The maas migration doc states praxis translates anthropic+messages bindings; the rendered configs contain only intelligent_route + credential_inject. Anthropic rejects unmappable Chat Completions fields with 400 (3.5 dropped them silently).', dt:[['praxis-ai runtime','anthropic_messages_to_chat_completions + streaming'],['Deployed by AGC','No — NOT IMPLEMENTED in rendered chain'],['Migration impact','anthropic+messages passes compat check; azure/vertex/bedrock block']], links:[['praxis-ai','https://github.com/praxis-proxy/ai'],['upgrade-to-3.6','https://github.com/opendatahub-io/models-as-a-service/blob/main/docs/content/migration/upgrade-to-3.6.md']] },
+  pr_gr: { t:'ai_guardrails (not deployed)', d:'IPP-parity gap: praxis-ai has an ai_guardrails filter (NeMo provider, chain-binding), and AGC scaffolds guardrails (AIGuardrail CRD + reusable attachment resolver, TrustyAI provider) — but nothing wires it into the deployed ext_proc chain yet.', dt:[['praxis-ai runtime','ai_guardrails (NeMo only; Lakera via http_callout)'],['AGC scaffolding','AIGuardrail CRD + pkg/guardrail resolver (unused by reconciler)'],['Deployed','No — NOT IMPLEMENTED in rendered chain']], links:[['praxis-ai guardrails','https://github.com/praxis-proxy/ai/tree/main/filters/src/guardrails'],['ai-gateway-controller','https://github.com/opendatahub-io/ai-gateway-controller']] },
+  pr_ihg: { t:'identity_header_guard (not deployed)', d:'IPP-parity gap: praxis-ai\'s identity_header_guard (capture + strip prefixed identity headers) is the documented equivalent of the legacy maas-headers-guard — but it is not in AGC\'s rendered chains.', dt:[['praxis-ai runtime','identity_header_guard (configurable prefix)'],['Legacy equivalent','maas-headers-guard (x-maas-*)'],['Deployed by AGC','No — NOT IMPLEMENTED in rendered chain']], links:[['praxis-ai','https://github.com/praxis-proxy/ai']] },
+  pr_sui: { t:'stream_usage_inject (not deployed)', d:'IPP-parity gap: praxis-ai\'s stream_usage_inject forces stream_options.include_usage on streaming requests — present and ungated at the deployed v0.6.0 pin (the praxis-extproc migration doc\'s \'no such filter\' note is stale) — but not rendered by AGC.', dt:[['praxis-ai runtime','stream_usage_inject (in v0.6.0, ungated)'],['Legacy equivalent','stream-usage-enforcer'],['Deployed by AGC','No — NOT IMPLEMENTED in rendered chain']], links:[['praxis-ai','https://github.com/praxis-proxy/ai']] },
   gw: { t:'Istio Gateway (Envoy)', d:'Envoy-based reverse proxy that receives all inference requests. Runs Kuadrant Wasm filter for auth/rate-limiting and ext_proc filters for payload processing and scheduling.', dt:[['Filter chain','ext_proc.ipp-pre → wasm auth → header_to_metadata → ext_proc.ipp → EPP ext_proc → router'],['Protocol','HTTP/1.1, HTTP/2, gRPC'],['Routing','External model providers or on-cluster InferencePool'],['Port','8080 (HTTP), 8443 (HTTPS)']], links:[['Kuadrant Docs','https://docs.kuadrant.io'],['Kuadrant Operator','https://github.com/Kuadrant/kuadrant-operator']] },
   p_rguard: { t:'nemo-request-guard', d:'NVIDIA NeMo Guardrails — evaluates content policies on the incoming request. Compiled into the payload-processing binary but NOT in the default profile: enable by editing the per-tenant plugins ConfigMap.', dt:[['Status','Opt-in (not in default profile)'],['Phase','Request'],['Type','ext_proc plugin']], links:[['Plugins (downstream)','https://github.com/opendatahub-io/ai-gateway-payload-processing']] },
   p_hguard: { t:'maas-headers-guard', d:'Captures all x-maas-* headers into CycleState and removes them from the forwarded request, so client-supplied identity headers never reach the provider. Added in 3.5 for body-based routing.', dt:[['Headers','x-maas-* (case-insensitive)'],['Side effect','CycleState["maas-headers"]'],['Since','RHOAI 3.5 (v0.2.1)'],['Phase','Request'],['Type','ext_proc plugin']], links:[['Plugins (downstream)','https://github.com/opendatahub-io/ai-gateway-payload-processing']] },
@@ -618,6 +627,21 @@ function drawBounds() {
     ctx.fillStyle = isDark ? '#f0883e99' : '#f0883e99';
     ctx.textAlign = 'left';
     ctx.fillText('Post-auth chain (ipp) →', tx(770), ty(324));
+
+    // IPP-parity section: capabilities that exist but are NOT in the deployed chain
+    ctx.beginPath();
+    ctx.roundRect(tx(758), ty(522), ts(345), ts(160), ts(8));
+    ctx.fillStyle = isDark ? '#8b949e08' : '#8b949e08';
+    ctx.fill();
+    ctx.strokeStyle = isDark ? '#8b949e40' : '#8b949e40';
+    ctx.lineWidth = ts(1.5);
+    ctx.setLineDash([ts(4), ts(3)]);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.font = `bold ${ts(9)}px system-ui`;
+    ctx.fillStyle = isDark ? '#8b949e99' : '#8b949e99';
+    ctx.textAlign = 'left';
+    ctx.fillText('IPP parity — in progress, NOT in deployed chain', tx(770), ty(534));
     ctx.restore();
   }
 
@@ -960,8 +984,8 @@ class Dot {
 // Scene node visibility per version (3.6 = praxis dataplane scene: praxis stack +
 // AGC + pool/EPP furniture for the internal flow; legacy stack hidden).
 const hiddenByScene = {
-  '3.4': ['pp_pre', 'p_ext', 'p_mpr_pre', 'p_hguard', 'p_sue', 'ulogs', 'praxis', 'praxis_pre', 'pr_mth', 'pr_llmisvc', 'pr_ir', 'pr_ci', 'pr_resp', 'iobj'],
-  '3.5': ['p_bfth', 'praxis', 'praxis_pre', 'pr_mth', 'pr_llmisvc', 'pr_ir', 'pr_ci', 'pr_resp', 'iobj'],
+  '3.4': ['pp_pre', 'p_ext', 'p_mpr_pre', 'p_hguard', 'p_sue', 'ulogs', 'praxis', 'praxis_pre', 'pr_mth', 'pr_llmisvc', 'pr_ir', 'pr_ci', 'pr_resp', 'pr_at', 'pr_gr', 'pr_ihg', 'pr_sui', 'iobj'],
+  '3.5': ['p_bfth', 'praxis', 'praxis_pre', 'pr_mth', 'pr_llmisvc', 'pr_ir', 'pr_ci', 'pr_resp', 'pr_at', 'pr_gr', 'pr_ihg', 'pr_sui', 'iobj'],
   '3.6': ['ipp', 'pp_pre', 'p_bfth', 'p_hguard', 'p_sue', 'p_mpr', 'p_at_req', 'p_aki', 'p_at_resp', 'p_rguard', 'p_resp_guard', 'p_bmth', 'p_ext', 'p_mpr_pre'],
 };
 function sceneNodes() {
